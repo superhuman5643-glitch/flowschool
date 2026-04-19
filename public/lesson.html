@@ -151,7 +151,20 @@
         <button data-feeling="ok">😐</button>
         <button data-feeling="müde">😴</button>
       </div>
-      <button class="btn btn-primary" id="checkin-done" disabled>Weiterlernen! 💪</button>
+      <button class="btn btn-primary" id="checkin-done" disabled>Weiter →</button>
+    </div>
+    <!-- Extra break option -->
+    <div class="extra-break hidden" id="extra-break">
+      <h3 style="margin-bottom:6px">Noch kurz Zeit für dich? 🚽🥤</h3>
+      <p style="font-size:.9rem;color:var(--muted);margin-bottom:16px">Toilette, etwas trinken — kein Stress!</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-secondary" id="extra-break-yes">Ja, 5 Minuten noch ⏱️</button>
+        <button class="btn btn-primary" id="extra-break-no">Nein, ich bin bereit! 💪</button>
+      </div>
+      <div class="extra-break-countdown hidden" id="extra-break-countdown">
+        <div class="break-timer" id="extra-countdown-display">5:00</div>
+        <p style="font-size:.85rem;color:var(--muted)">Geht automatisch weiter…</p>
+      </div>
     </div>
   </div>
 

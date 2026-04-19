@@ -354,6 +354,12 @@
   font-size: .85rem; color: var(--muted);
   margin-bottom: 8px;
 }
+.extra-break {
+  text-align: center;
+  animation: fadeUp .3s ease;
+  margin-top: 8px;
+}
+.extra-break-countdown { margin-top: 16px; }
 .checkin-form {
   width: 100%; max-width: 400px;
   margin-top: 16px;

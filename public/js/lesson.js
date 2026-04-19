@@ -56,6 +56,15 @@ async function initLesson() {
   // Restore active time from localStorage
   state.activeMs = parseInt(localStorage.getItem(LS_ACTIVE_KEY) || '0', 10);
 
+  // Testuser: break triggers after 5 seconds for testing
+  if (state.user.email === 'testuser@flowschool.app') {
+    window._BREAK_WARN_MS  = 5000;
+    window._BREAK_FORCE_MS = 8000;
+  } else {
+    window._BREAK_WARN_MS  = BREAK_WARN_MS;
+    window._BREAK_FORCE_MS = BREAK_FORCE_MS;
+  }
+
   await startSession();
   startActiveTimer();
   setupScrollProgress();
@@ -93,11 +102,11 @@ function startActiveTimer() {
     state.activeMs += 1000;
     localStorage.setItem(LS_ACTIVE_KEY, String(state.activeMs));
 
-    if (!state.breakWarnShown && state.activeMs >= BREAK_WARN_MS) {
+    if (!state.breakWarnShown && state.activeMs >= window._BREAK_WARN_MS) {
       state.breakWarnShown = true;
       showBreakReminder();
     }
-    if (state.activeMs >= BREAK_FORCE_MS) {
+    if (state.activeMs >= window._BREAK_FORCE_MS) {
       startBreak();
     }
   }, 1000);
@@ -175,14 +184,9 @@ function setupCheckin() {
       btn.classList.add('selected');
       document.getElementById('checkin-done').disabled = false;
     });
-  }, { once: true });
+  });
 
   document.getElementById('checkin-done').addEventListener('click', async () => {
-    state.activeMs = 0;
-    state.breakWarnShown = false;
-    state.breakActive = false;
-    localStorage.setItem(LS_ACTIVE_KEY, '0');
-
     try {
       if (state.sessionId) {
         const { data } = await state.sb.from('sessions')
@@ -195,18 +199,54 @@ function setupCheckin() {
       }
     } catch {}
 
-    // Reset break screen for potential next break
-    document.getElementById('break-video-wrap').style.display = '';
-    document.getElementById('break-video-status').style.display = '';
-    document.getElementById('break-video-status').textContent = '⏳ Lade Bewegungsvideo…';
-    document.getElementById('break-video-container').innerHTML = '';
+    // Show extra break option
     document.getElementById('checkin-form').classList.add('hidden');
-    document.getElementById('checkin-done').disabled = true;
-    document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
-    document.getElementById('break-screen').classList.add('hidden');
-
-    showToast('Super! Weiter geht\'s! 💪', 'success');
+    document.getElementById('extra-break').classList.remove('hidden');
   }, { once: true });
+
+  document.getElementById('extra-break-no').addEventListener('click', () => endBreak(), { once: true });
+
+  document.getElementById('extra-break-yes').addEventListener('click', () => {
+    document.getElementById('extra-break-yes').disabled = true;
+    document.getElementById('extra-break-no').disabled = true;
+    document.getElementById('extra-break-countdown').classList.remove('hidden');
+
+    let secs = 5 * 60;
+    const display = document.getElementById('extra-countdown-display');
+    const tick = setInterval(() => {
+      secs--;
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      display.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+      if (secs <= 0) { clearInterval(tick); endBreak(); }
+    }, 1000);
+
+    // Allow early finish
+    document.getElementById('extra-break-no').disabled = false;
+    document.getElementById('extra-break-no').textContent = 'Ich bin bereit! 💪';
+    document.getElementById('extra-break-no').addEventListener('click', () => { clearInterval(tick); endBreak(); }, { once: true });
+  }, { once: true });
+}
+
+function endBreak() {
+  state.activeMs = 0;
+  state.breakWarnShown = false;
+  state.breakActive = false;
+  localStorage.setItem(LS_ACTIVE_KEY, '0');
+
+  // Reset break screen
+  document.getElementById('break-video-wrap').style.display = '';
+  document.getElementById('break-video-status').style.display = '';
+  document.getElementById('break-video-status').textContent = '⏳ Lade Bewegungsvideo…';
+  document.getElementById('break-video-container').innerHTML = '';
+  document.getElementById('checkin-form').classList.add('hidden');
+  document.getElementById('checkin-done').disabled = true;
+  document.getElementById('extra-break').classList.add('hidden');
+  document.getElementById('extra-break-countdown').classList.add('hidden');
+  document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
+  document.getElementById('break-screen').classList.add('hidden');
+
+  showToast('Super! Weiter geht\'s! 💪', 'success');
 }
 
 function setupVideoExpand() {
