@@ -12,27 +12,31 @@ export default async function handler(req, res) {
 
   // Return cached content if available
   if (lessonId) {
-    const { data: cached } = await sb
-      .from('lessons')
-      .select('content, quiz_questions, video_search_term, generated_at')
-      .eq('id', lessonId)
-      .single()
-      .catch(() => ({ data: null }));
+    try {
+      const { data: cached } = await sb
+        .from('lessons')
+        .select('content, quiz_questions, video_search_term, generated_at')
+        .eq('id', lessonId)
+        .single();
 
-    if (cached?.generated_at && cached?.content) {
-      return res.json({
-        content: cached.content,
-        quizQuestions: cached.quiz_questions || [],
-        videoSearchTerm: cached.video_search_term || ''
-      });
-    }
+      if (cached?.generated_at && cached?.content) {
+        return res.json({
+          content: cached.content,
+          quizQuestions: cached.quiz_questions || [],
+          videoSearchTerm: cached.video_search_term || ''
+        });
+      }
+    } catch {}
   }
 
   // Build profile context
   let profileCtx = '';
   if (userId) {
-    const { data: profile } = await sb.from('child_profiles')
-      .select('*').eq('user_id', userId).single().catch(() => ({ data: null }));
+    let profile = null;
+    try {
+      const { data } = await sb.from('child_profiles').select('*').eq('user_id', userId).single();
+      profile = data;
+    } catch {}
 
     if (profile) {
       const parts = [];
@@ -86,12 +90,14 @@ Video-Suchbegriff: passender YouTube-Begriff auf Deutsch für ein erklärendes V
 
     // Cache in DB
     if (lessonId) {
-      await sb.from('lessons').update({
-        content: json.content,
-        quiz_questions: json.quizQuestions,
-        video_search_term: json.videoSearchTerm,
-        generated_at: new Date().toISOString()
-      }).eq('id', lessonId).catch(() => {});
+      try {
+        await sb.from('lessons').update({
+          content: json.content,
+          quiz_questions: json.quizQuestions,
+          video_search_term: json.videoSearchTerm,
+          generated_at: new Date().toISOString()
+        }).eq('id', lessonId);
+      } catch {}
     }
 
     res.json(json);

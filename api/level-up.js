@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     subject_id: subjectId,
     level: completedLevel,
     sticker_emoji: stickerEmoji
-  }, { onConflict: 'user_id,subject_id,level', ignoreDuplicates: true }).catch(() => {});
+  }, { onConflict: 'user_id,subject_id,level', ignoreDuplicates: true });
 
   // Check if level-2 lessons already exist for this subject
   const { data: existing } = await sb
