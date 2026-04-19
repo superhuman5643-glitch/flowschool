@@ -23,7 +23,7 @@ async function initHome() {
   document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('header-avatar').addEventListener('click', logout);
 
-  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id)]);
+  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id)]);
   hideLoader();
 }
 
@@ -114,10 +114,15 @@ async function loadSubjects(sb, userId) {
       .sort((a, b) => a.level - b.level)
       .map(s => s.sticker_emoji).join('');
 
+    // Show "Level X freigeschaltet!" when user finished a level and new lessons exist
+    const hasNewLevel = levelComplete && prog.total > prog.done;
+    const newLevelNum = levelComplete ? currentLevel : 0;
+
     const card = document.createElement('div');
     card.className = 'subject-card';
     card.style.animationDelay = `${i * 0.06}s`;
     card.innerHTML = `
+      ${hasNewLevel ? `<div class="subject-card__new-level">🔓 Level ${newLevelNum} neu!</div>` : ''}
       <div class="subject-card__bg" style="background:linear-gradient(135deg,${subject.color_from},${subject.color_to})"></div>
       <div class="subject-card__body">
         <span class="subject-card__emoji">${subject.emoji}</span>
@@ -376,6 +381,38 @@ async function showLessons(sb, userId, subject) {
       });
       list.appendChild(item);
     });
+  });
+}
+
+/* ─── Badge collection ─── */
+async function loadBadges(sb, userId) {
+  const { data: stickers } = await sb
+    .from('level_stickers')
+    .select('level, sticker_emoji, subject_id, subjects(name)')
+    .eq('user_id', userId)
+    .order('subject_id')
+    .order('level');
+
+  const section = document.getElementById('badges-section');
+  const grid    = document.getElementById('badges-grid');
+  const count   = document.getElementById('badge-count');
+  if (!stickers || stickers.length === 0) return;
+
+  section.classList.remove('hidden');
+  count.textContent = `${stickers.length} verdient`;
+  grid.innerHTML = '';
+
+  stickers.forEach((s, i) => {
+    const subjectName = s.subjects?.name || '';
+    const card = document.createElement('div');
+    card.className = 'badge-card';
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.innerHTML = `
+      <div class="badge-card__emoji">${s.sticker_emoji}</div>
+      <div class="badge-card__level">Level ${s.level}</div>
+      <div class="badge-card__subject">${subjectName}</div>
+    `;
+    grid.appendChild(card);
   });
 }
 

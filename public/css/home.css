@@ -130,6 +130,66 @@
   letter-spacing: 2px;
 }
 
+/* ─── Level unlock indicator on card ─── */
+.subject-card__new-level {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 99px;
+  letter-spacing: .03em;
+  box-shadow: 0 0 12px rgba(124,106,255,.6);
+  animation: pulse-glow 2s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(124,106,255,.6); }
+  50%       { box-shadow: 0 0 22px rgba(255,106,158,.8); }
+}
+
+/* ─── Badge collection ─── */
+.badge-count {
+  font-size: .85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+}
+.badge-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 12px;
+  text-align: center;
+  animation: fadeUp .35s ease both;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.badge-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.4);
+  border-color: var(--purple);
+}
+.badge-card__emoji { font-size: 2.2rem; margin-bottom: 8px; }
+.badge-card__level {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--purple);
+  margin-bottom: 4px;
+}
+.badge-card__subject {
+  font-size: .75rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
 /* ─── XP Bonus Banner ─── */
 .xp-bonus {
   margin: 0 24px 20px;
