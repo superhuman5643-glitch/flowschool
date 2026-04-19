@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSchool — Meine Themen</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/home.css" />
+</head>
+<body>
+  <div id="page-loader">
+    <div class="spinner spinner-lg"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header__logo">FlowSchool</div>
+    <div class="header__actions">
+      <span id="header-greeting" class="text-muted text-sm hide-mobile"></span>
+      <div class="header__avatar" id="header-avatar" title="Abmelden">L</div>
+    </div>
+  </header>
+
+  <!-- View: Subject grid -->
+  <div id="view-home" class="view active">
+    <!-- Stats -->
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-card">
+        <div class="stat-card__icon">🔥</div>
+        <div>
+          <div class="stat-card__value" id="stat-days">0</div>
+          <div class="stat-card__label">Tage aktiv</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon">⏱️</div>
+        <div>
+          <div class="stat-card__value" id="stat-hours">0h</div>
+          <div class="stat-card__label">Gelernt</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon">⚡</div>
+        <div>
+          <div class="stat-card__value" id="stat-xp">0</div>
+          <div class="stat-card__label">XP-Punkte</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__icon">✅</div>
+        <div>
+          <div class="stat-card__value" id="stat-lessons">0</div>
+          <div class="stat-card__label">Lektionen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subjects -->
+    <div class="section">
+      <div class="section__header">
+        <h2>Meine Themen</h2>
+      </div>
+      <div class="subject-grid" id="subject-grid">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- View: Lesson list for a subject -->
+  <div id="view-lessons" class="view">
+    <div class="section" style="padding-top:24px">
+      <div class="back-btn" id="back-to-home">← Zurück</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <span id="subject-emoji" style="font-size:2.2rem"></span>
+        <div>
+          <h2 id="subject-name"></h2>
+          <p id="subject-desc" class="text-muted text-sm"></p>
+        </div>
+      </div>
+      <div class="lesson-list" id="lesson-list">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add subject -->
+  <div id="modal-add-subject" class="modal-overlay hidden">
+    <div class="modal">
+      <h3 class="modal__title">Neues Thema hinzufügen</h3>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Thema-Name</label>
+        <input class="input" id="new-subject-name" placeholder="z.B. Astronomie" maxlength="40" />
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Emoji</label>
+        <input class="input" id="new-subject-emoji" placeholder="z.B. 🌙" maxlength="4" style="width:80px" />
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Kurze Beschreibung</label>
+        <input class="input" id="new-subject-desc" placeholder="Worum geht's?" maxlength="80" />
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn-secondary" id="modal-cancel">Abbrechen</button>
+        <button class="btn btn-primary" id="modal-save">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/home.js"></script>
+  <script>
+    initHome();
+  </script>
+</body>
+</html>

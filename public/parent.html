@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSchool — Eltern-Dashboard</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/parent.css" />
+</head>
+<body>
+  <div id="page-loader"><div class="spinner spinner-lg"></div></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header__logo">FlowSchool</div>
+    <div class="header__actions">
+      <span class="badge badge-new">Eltern-Ansicht</span>
+      <div class="header__avatar" id="header-avatar" title="Abmelden" style="background:linear-gradient(135deg,#ff6a9e,#ffcc6a)">M</div>
+    </div>
+  </header>
+
+  <div class="parent-layout">
+
+    <!-- Greeting -->
+    <div class="parent-header">
+      <div>
+        <div class="parent-header__greeting">Hallo Mike 👋</div>
+        <h1 class="parent-header__title">Lennys Lernfortschritt</h1>
+      </div>
+      <div class="date-filter">
+        <button class="date-btn active" data-days="7">7 Tage</button>
+        <button class="date-btn" data-days="30">30 Tage</button>
+        <button class="date-btn" data-days="0">Gesamt</button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary-grid">
+      <div class="summary-card summary-card--purple">
+        <div class="summary-card__label">Lektionen abgeschlossen</div>
+        <div class="summary-card__value" id="stat-lessons">—</div>
+        <div class="summary-card__sub" id="stat-lessons-sub">diese Woche</div>
+      </div>
+      <div class="summary-card summary-card--green">
+        <div class="summary-card__label">Lernzeit</div>
+        <div class="summary-card__value" id="stat-time">—</div>
+        <div class="summary-card__sub" id="stat-time-sub">Stunden</div>
+      </div>
+      <div class="summary-card summary-card--yellow">
+        <div class="summary-card__label">XP gesammelt</div>
+        <div class="summary-card__value" id="stat-xp">—</div>
+        <div class="summary-card__sub">Punkte</div>
+      </div>
+      <div class="summary-card summary-card--pink">
+        <div class="summary-card__label">Pausen gemacht</div>
+        <div class="summary-card__value" id="stat-breaks">—</div>
+        <div class="summary-card__sub">Bewegungspausen</div>
+      </div>
+    </div>
+
+    <!-- Row 1: Activity + Questions -->
+    <div class="parent-grid">
+
+      <div class="panel">
+        <div class="panel__header">
+          <div class="panel__title">📅 Letzte Aktivitäten</div>
+        </div>
+        <div class="panel__body">
+          <div class="activity-list" id="activity-list">
+            <div class="empty-state">
+              <div class="empty-state__emoji">📚</div>
+              Noch keine Aktivitäten
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__header">
+          <div class="panel__title">❓ Lennys Fragen</div>
+        </div>
+        <div class="panel__body">
+          <div id="questions-list">
+            <div class="empty-state">
+              <div class="empty-state__emoji">💬</div>
+              Lenny hat noch keine Fragen gestellt
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row 2: Subject progress + Streak -->
+    <div class="parent-grid">
+
+      <div class="panel">
+        <div class="panel__header">
+          <div class="panel__title">📊 Fortschritt pro Thema</div>
+        </div>
+        <div class="panel__body">
+          <div class="subject-progress-list" id="subject-progress-list">
+            <div class="empty-state">
+              <div class="empty-state__emoji">🚀</div>
+              Noch kein Fortschritt
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__header">
+          <div class="panel__title">🔥 Lern-Streak</div>
+        </div>
+        <div class="panel__body">
+          <p class="text-sm text-muted" style="margin-bottom:12px">
+            Aktive Lerntage der letzten 4 Wochen
+          </p>
+          <div class="streak-grid" id="streak-grid">
+            <!-- Injected by JS -->
+          </div>
+          <div style="margin-top:16px;display:flex;align-items:center;gap:8px;font-size:.85rem">
+            <span style="width:14px;height:14px;border-radius:3px;background:var(--purple);display:inline-block"></span>
+            <span class="text-muted">Aktiver Tag</span>
+            <span style="width:14px;height:14px;border-radius:3px;background:var(--bg2);border:1px solid var(--border);display:inline-block;margin-left:12px"></span>
+            <span class="text-muted">Kein Lernen</span>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:var(--bg2);border-radius:var(--radius-sm);text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:var(--yellow)" id="streak-count">0</div>
+            <div class="text-sm text-muted">Tage in Folge 🔥</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /parent-layout -->
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/parent.js"></script>
+  <script>
+    initParent();
+  </script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSchool — Anmelden</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+
+    .login-wrap {
+      width: 100%; max-width: 420px;
+      animation: fadeUp .45s ease;
+    }
+    .login-logo {
+      text-align: center; margin-bottom: 36px;
+    }
+    .login-logo__mark {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 2.2rem;
+      background: linear-gradient(135deg, #7c6aff, #ff6a9e);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .login-logo__sub { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+    }
+    .login-card h2 { margin-bottom: 8px; }
+    .login-card p { color: var(--muted); font-size: .9rem; margin-bottom: 28px; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+
+    .login-footer {
+      text-align: center; margin-top: 20px;
+      font-size: .85rem; color: var(--muted);
+    }
+
+    .error-msg {
+      background: rgba(255,106,158,.1);
+      border: 1px solid rgba(255,106,158,.3);
+      border-radius: var(--radius-sm);
+      color: var(--pink);
+      padding: 10px 14px;
+      font-size: .875rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .role-selector {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .role-btn {
+      padding: 14px 10px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border);
+      background: var(--bg2);
+      color: var(--muted);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .role-btn:hover { border-color: var(--purple); color: var(--text); }
+    .role-btn.selected { border-color: var(--purple); background: rgba(124,106,255,.1); color: var(--text); }
+    .role-btn__emoji { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+    .role-btn__name { font-weight: 600; font-size: .9rem; }
+    .role-btn__sub { font-size: .75rem; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div id="page-loader">
+    <div class="spinner spinner-lg"></div>
+  </div>
+
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="login-logo__mark">FlowSchool</div>
+      <div class="login-logo__sub">Lernen, das Spaß macht ✨</div>
+    </div>
+
+    <div class="login-card">
+      <h2>Willkommen zurück!</h2>
+      <p>Meld dich an und mach weiter wo du aufgehört hast.</p>
+
+      <div class="role-selector">
+        <div class="role-btn selected" data-role="lenny">
+          <span class="role-btn__emoji">🧑‍🚀</span>
+          <div class="role-btn__name">Lenny</div>
+          <div class="role-btn__sub">Ich lerne</div>
+        </div>
+        <div class="role-btn" data-role="parent">
+          <span class="role-btn__emoji">👨‍💼</span>
+          <div class="role-btn__name">Mike</div>
+          <div class="role-btn__sub">Eltern-Ansicht</div>
+        </div>
+      </div>
+
+      <div id="error-msg" class="error-msg"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">E-Mail</label>
+          <input class="input" type="email" id="email" placeholder="deine@email.de" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Passwort</label>
+          <input class="input" type="password" id="password" placeholder="••••••••" required />
+        </div>
+        <button class="btn btn-primary btn-lg w-full" type="submit" id="login-btn">
+          <span id="login-btn-text">Anmelden</span>
+          <span id="login-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px"></span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        Noch kein Konto? <a href="#" id="signup-link">Registrieren</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    initLogin();
+  </script>
+</body>
+</html>

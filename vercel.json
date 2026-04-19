@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/home", "destination": "/public/home.html" },
+    { "source": "/lesson", "destination": "/public/lesson.html" },
+    { "source": "/parent", "destination": "/public/parent.html" },
+    { "source": "/", "destination": "/public/index.html" }
+  ]
+}

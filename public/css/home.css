@@ -1,0 +1,211 @@
+/* ── FlowSchool — Home / Dashboard ── */
+
+/* ─── Header ─── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,15,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header__logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header__actions { display: flex; align-items: center; gap: 12px; }
+.header__avatar {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; font-weight: 700;
+  cursor: pointer; color: #fff;
+}
+
+/* ─── Stats bar ─── */
+.stats-bar {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stats-bar::-webkit-scrollbar { display: none; }
+
+.stat-card {
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex; align-items: center; gap: 12px;
+  min-width: 150px;
+  animation: fadeUp .4s ease both;
+}
+.stat-card:nth-child(1) { animation-delay: .05s; }
+.stat-card:nth-child(2) { animation-delay: .10s; }
+.stat-card:nth-child(3) { animation-delay: .15s; }
+.stat-card:nth-child(4) { animation-delay: .20s; }
+
+.stat-card__icon {
+  font-size: 1.5rem;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg2);
+  border-radius: var(--radius-sm);
+}
+.stat-card__value {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-card__label { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+/* ─── Section ─── */
+.section { padding: 0 24px 32px; }
+.section__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* ─── Subject grid ─── */
+.subject-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.subject-card {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+  animation: fadeUp .4s ease both;
+  border: 1px solid var(--border);
+  min-height: 160px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.subject-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+
+.subject-card__bg {
+  position: absolute; inset: 0;
+  opacity: .18;
+  transition: opacity var(--transition);
+}
+.subject-card:hover .subject-card__bg { opacity: .26; }
+
+.subject-card__body {
+  position: relative;
+  padding: 20px;
+  background: linear-gradient(to top, rgba(10,10,15,.95) 60%, transparent);
+}
+.subject-card__emoji { font-size: 1.8rem; margin-bottom: 8px; display: block; }
+.subject-card__name {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.subject-card__meta {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.subject-card__badges { display: flex; gap: 6px; margin-bottom: 10px; }
+.subject-card__progress { }
+
+/* ─── Add subject card ─── */
+.add-subject-card {
+  border-radius: var(--radius);
+  border: 2px dashed var(--border);
+  min-height: 160px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  color: var(--muted);
+  font-size: .9rem;
+}
+.add-subject-card:hover { border-color: var(--purple); background: rgba(124,106,255,.05); color: var(--purple); }
+.add-subject-card__icon { font-size: 2rem; }
+
+/* ─── Modal ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  animation: fadeIn .2s ease;
+}
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%; max-width: 480px;
+  animation: fadeUp .25s ease;
+  box-shadow: var(--shadow);
+}
+.modal__title { margin-bottom: 20px; }
+.modal__actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+/* ─── Lesson list ─── */
+.lesson-list { display: flex; flex-direction: column; gap: 8px; }
+.lesson-item {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  animation: fadeUp .3s ease both;
+}
+.lesson-item:hover { background: var(--card2); border-color: var(--purple); }
+.lesson-item__number {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 600;
+  flex-shrink: 0;
+}
+.lesson-item.completed .lesson-item__number {
+  background: rgba(106,255,204,.15);
+  border-color: var(--green);
+  color: var(--green);
+}
+.lesson-item__title { flex: 1; font-size: .95rem; }
+.lesson-item__meta { font-size: .8rem; color: var(--muted); }
+
+/* ─── Back button ─── */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--muted); font-size: .9rem;
+  cursor: pointer; transition: color var(--transition);
+  margin-bottom: 20px;
+}
+.back-btn:hover { color: var(--text); }
+
+/* ─── Page views ─── */
+.view { display: none; }
+.view.active { display: block; }
+
+@media (max-width: 480px) {
+  .subject-grid { grid-template-columns: 1fr 1fr; }
+  .stats-bar { padding: 16px; }
+  .section { padding: 0 16px 24px; }
+}

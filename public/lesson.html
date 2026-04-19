@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSchool — Lektion</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/lesson.css" />
+</head>
+<body>
+  <div id="page-loader"><div class="spinner spinner-lg"></div></div>
+
+  <!-- Scroll progress bar -->
+  <div class="read-progress"><div class="read-progress__fill" id="scroll-progress"></div></div>
+
+  <div class="lesson-layout">
+
+    <!-- Header -->
+    <div class="lesson-header">
+      <div class="lesson-header__back" id="back-btn" title="Zurück">←</div>
+      <div class="lesson-header__info">
+        <div class="lesson-header__subject" id="lesson-subject-name">Laden…</div>
+        <h1 class="lesson-header__title" id="lesson-title">Laden…</h1>
+      </div>
+    </div>
+
+    <!-- Read timer notice -->
+    <div class="timer-notice" id="timer-notice">
+      ⏱️ Lesezeit: noch <span class="timer-notice__time" id="timer-display">—</span> — dann wird der Weiter-Button freigeschaltet
+    </div>
+
+    <!-- Lesson content -->
+    <div class="lesson-content" id="lesson-content">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="skeleton" style="height:24px;width:60%"></div>
+        <div class="skeleton" style="height:16px;width:100%"></div>
+        <div class="skeleton" style="height:16px;width:95%"></div>
+        <div class="skeleton" style="height:16px;width:88%"></div>
+        <div class="skeleton" style="height:16px;width:100%"></div>
+        <div class="skeleton" style="height:16px;width:72%"></div>
+        <div class="skeleton" style="height:16px;width:90%"></div>
+        <div class="skeleton" style="height:16px;width:80%"></div>
+      </div>
+    </div>
+
+    <!-- Video -->
+    <div class="video-section" id="video-section">
+      <div class="video-section__label">🎬 Passendes Video dazu</div>
+      <div class="video-wrapper" id="video-wrapper">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div class="video-progress-bar" style="margin-top:8px">
+        <div class="video-progress-bar__fill" id="video-progress-fill" style="width:0%"></div>
+      </div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:4px" id="video-hint">
+        Schau mindestens 50% des Videos bevor du weitermachst
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat-section" id="chat-section">
+      <div class="chat-toggle" id="chat-toggle">
+        <div class="chat-toggle__left">
+          💬 <span>Frag mich was zur Lektion!</span>
+        </div>
+        <span class="chat-toggle__arrow" id="chat-arrow">▾</span>
+      </div>
+      <div class="chat-body" id="chat-body">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg chat-msg--ai">
+            <div class="chat-msg__avatar">AI</div>
+            <div class="chat-msg__bubble">
+              Hey! Ich bin hier um dir zu helfen. Stell mir einfach irgendeine Frage zur Lektion — kein Problem ist zu klein! 😊
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input class="input" id="chat-input" placeholder="Deine Frage…" style="flex:1" />
+          <button class="btn btn-primary btn-sm" id="chat-send">Senden</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quiz -->
+    <div class="quiz-section hidden" id="quiz-section">
+      <div class="quiz-header">
+        <span style="font-size:1.3rem">🧠</span>
+        <h3>Kurze Lernkontrolle</h3>
+        <span class="badge badge-new">Pflicht</span>
+      </div>
+      <p class="text-muted text-sm" style="margin-bottom:16px">
+        Beantworte kurz mit eigenen Worten — dann gilt die Lektion als abgeschlossen!
+      </p>
+      <div id="quiz-questions"></div>
+      <button class="btn btn-primary" id="quiz-submit" style="margin-top:12px">
+        Antworten abschicken
+      </button>
+    </div>
+
+    <!-- Complete banner -->
+    <div class="complete-banner hidden" id="complete-banner">
+      <div class="complete-banner__emoji">🎉</div>
+      <h2>Lektion abgeschlossen!</h2>
+      <p class="text-muted">Super gemacht — du hast alles verstanden!</p>
+      <div class="complete-banner__xp" id="complete-xp">+100 XP</div>
+      <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" id="next-lesson-btn">Nächste Lektion →</button>
+        <button class="btn btn-secondary" id="back-home-btn">Zurück zur Übersicht</button>
+      </div>
+    </div>
+
+  </div><!-- /lesson-layout -->
+
+  <!-- Floating footer -->
+  <div class="lesson-footer">
+    <div class="lesson-footer__info" id="footer-info">Lies den Text und schau das Video</div>
+    <button class="btn btn-primary" id="continue-btn" disabled>Weiter →</button>
+  </div>
+
+  <!-- Break reminder (soft) -->
+  <div class="break-overlay hidden" id="break-reminder" style="background:rgba(10,10,15,.85)">
+    <div class="break-overlay__emoji">🧘</div>
+    <h2 class="break-overlay__title">25 Minuten geschafft!</h2>
+    <p class="break-overlay__sub">Zeit für eine kurze Bewegungspause — dein Gehirn wird es dir danken!</p>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button class="btn btn-primary btn-lg" id="start-break-btn">Pause starten 🏃</button>
+      <button class="btn btn-secondary" id="skip-reminder-btn">Noch 2 Minuten</button>
+    </div>
+  </div>
+
+  <!-- Break screen (forced) -->
+  <div class="break-overlay hidden" id="break-screen">
+    <div class="break-overlay__emoji">🏃‍♂️</div>
+    <h2 class="break-overlay__title">Aktive Pause!</h2>
+    <p class="break-overlay__sub">5 Minuten Bewegung — dann geht's weiter!</p>
+    <div class="break-timer" id="break-countdown">5:00</div>
+    <div class="break-video-wrap" id="break-video-wrap">
+      <div class="video-wrapper" style="position:relative;padding-top:56.25%">
+        <div id="break-video-container" style="position:absolute;inset:0"></div>
+      </div>
+    </div>
+    <!-- Check-in after break -->
+    <div class="checkin-form hidden" id="checkin-form">
+      <h3 style="margin-bottom:8px">Wie fühlst du dich jetzt?</h3>
+      <div class="checkin-emojis" id="checkin-emojis">
+        <button data-feeling="toll">😄</button>
+        <button data-feeling="gut">🙂</button>
+        <button data-feeling="ok">😐</button>
+        <button data-feeling="müde">😴</button>
+      </div>
+      <button class="btn btn-primary" id="checkin-done" disabled>Weiterlernen!</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/lesson.js"></script>
+  <script>
+    initLesson();
+  </script>
+</body>
+</html>
