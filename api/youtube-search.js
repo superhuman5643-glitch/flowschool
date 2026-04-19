@@ -1,4 +1,21 @@
-import { getVideoSettings } from './video-settings.js';
+import { createClient as createSb } from '@supabase/supabase-js';
+
+async function getVideoSettings() {
+  try {
+    const sb = createSb(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const { data } = await sb.from('app_settings').select('key, value');
+    const map = {};
+    (data || []).forEach(r => { map[r.key] = r.value; });
+    return {
+      preferred_channels: map.preferred_channels || '',
+      max_age_years:      map.max_age_years      || '5',
+      video_duration:     map.video_duration     || 'medium',
+      language:           map.language           || 'de',
+    };
+  } catch {
+    return { preferred_channels: '', max_age_years: '5', video_duration: 'medium', language: 'de' };
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
