@@ -13,10 +13,6 @@ function stickerFor(subjectName, level) {
   return list[(level - 1) % list.length];
 }
 
-/* ─── Ensure 4th core subject exists ─── */
-async function ensureBusinessSubject() {
-  try { await fetch('/api/seed-subjects', { method: 'POST' }); } catch {}
-}
 
 async function initHome() {
   const ctx = await requireAuth('lenny');
@@ -65,7 +61,6 @@ async function loadStats(sb, userId) {
 
 /* ─── Subjects ─── */
 async function loadSubjects(sb, userId) {
-  await ensureBusinessSubject(sb);
 
   // Fetch subjects
   const { data: mandatory } = await sb.from('subjects').select('*').eq('is_mandatory', true).order('sort_order');
@@ -674,10 +669,11 @@ async function loadChallenges(sb, userId) {
               reader.onerror = reject;
               reader.readAsDataURL(file);
             });
-            const upRes  = await fetch('/api/upload-photo', {
+            const upRes  = await fetch('/api/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                type: 'photo',
                 userId, challengeId: challenge.id,
                 fileName: file.name, fileType: file.type, fileBase64: base64
               })
@@ -776,10 +772,10 @@ function setupAvatarUpload(sb, userId, avatarEl) {
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-      const res  = await fetch('/api/upload-avatar', {
+      const res  = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, fileType: file.type, fileBase64: base64 })
+        body: JSON.stringify({ type: 'avatar', userId, fileType: file.type, fileBase64: base64 })
       });
       const data = await res.json();
       if (data.url) {
@@ -846,10 +842,11 @@ function showOnboarding(sb, userId) {
 
     // Save to DB
     try {
-      await fetch('/api/save-onboarding', {
+      await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action:        'save',
           userId,
           interests:     answers.interests,
           strongTopics:  answers.strong,
