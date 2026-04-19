@@ -43,6 +43,33 @@ a:hover { color: var(--pink); }
 
 img { max-width: 100%; display: block; }
 
+/* ── Shared header ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,15,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header__logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 1.3rem;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header__actions { display: flex; align-items: center; gap: 12px; }
+.header__avatar {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; font-weight: 700;
+  cursor: pointer; color: #fff;
+}
+
 /* ── Buttons ── */
 .btn {
   display: inline-flex;
