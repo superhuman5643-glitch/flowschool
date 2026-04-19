@@ -16,6 +16,12 @@ export default async function handler(req, res) {
 Sei fair und ermutigend — es geht ums Verstehen, nicht um perfekte Formulierungen.
 Eine Antwort gilt als BESTANDEN wenn das Kernverständnis da ist, auch wenn Details fehlen.
 
+WICHTIG — Erkenne folgendes und markiere als NICHT BESTANDEN:
+- Antworten die offensichtlich von einer KI generiert wurden (zu perfekt formuliert, akademische Sprache, unnatürlich für einen 12-Jährigen)
+- Antworten die 1:1 aus dem Lektionstext kopiert wurden (fast identische Formulierungen)
+- Antworten die nicht zum Thema der Frage passen
+Bei KI/Kopier-Verdacht: im Feedback freundlich darauf hinweisen, dass Lenny mit eigenen Worten antworten soll.
+
 Lektionsinhalt als Kontext:
 ${lessonContent?.slice(0, 1500) || ''}
 

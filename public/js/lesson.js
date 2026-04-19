@@ -13,6 +13,7 @@ let state = {
   readTimerDone: false,
   videoProgress: 0,
   videoDone: false,
+  maxWatchedTime: 0,
   quizUnlocked: false,
   lessonDone: false,
   chatHistory: [],
@@ -133,20 +134,25 @@ async function fetchBreakVideo() {
     const res = await fetch('/api/youtube-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ searchTerm: 'Kinder Yoga Bewegungspause 5 Minuten', isBreak: true })
+      body: JSON.stringify({ searchTerm: 'Kinder Bewegungspause Mitmachvideo 5 Minuten', isBreak: true })
     });
     const { videoId } = await res.json();
     if (videoId) {
       const container = document.getElementById('break-video-container');
-      container.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1"
-        style="position:absolute;inset:0;width:100%;height:100%;border:0"
-        allow="autoplay" allowfullscreen></iframe>`;
+      // controls=0: keine YouTube-Controls/Links, autoplay, kein Redirect möglich
+      container.innerHTML = `
+        <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1&playsinline=1"
+          style="position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none"
+          allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        <div style="position:absolute;inset:0;cursor:default"></div>`;
     }
   } catch {}
 }
 
 function showCheckin() {
   document.getElementById('break-countdown').style.display = 'none';
+  // Hide video, show checkin
+  document.getElementById('break-video-wrap').style.display = 'none';
   document.getElementById('checkin-form').classList.remove('hidden');
 
   document.querySelectorAll('.checkin-emojis button').forEach(btn => {
@@ -158,21 +164,24 @@ function showCheckin() {
   });
 
   document.getElementById('checkin-done').addEventListener('click', async () => {
-    // Reset timers
     state.activeMs = 0;
     state.breakWarnShown = false;
     state.breakActive = false;
     localStorage.setItem(LS_ACTIVE_KEY, '0');
 
-    // Log break in session
+    // Properly increment breaks_taken
     if (state.sessionId) {
-      await state.sb.from('sessions')
-        .update({ breaks_taken: state.sb.rpc('breaks_taken + 1') })
-        .eq('id', state.sessionId)
-        .catch(() => {});
+      const { data } = await state.sb.from('sessions')
+        .select('breaks_taken').eq('id', state.sessionId).single().catch(() => ({ data: null }));
+      if (data) {
+        await state.sb.from('sessions')
+          .update({ breaks_taken: (data.breaks_taken || 0) + 1 })
+          .eq('id', state.sessionId).catch(() => {});
+      }
     }
 
     document.getElementById('break-screen').classList.add('hidden');
+    document.getElementById('break-video-wrap').style.display = '';
     showToast('Super! Weiter geht\'s! 💪', 'success');
   });
 }
@@ -313,13 +322,27 @@ function updateVideoProgress() {
   const current  = p.getCurrentTime();
   if (!duration) return;
 
+  // Vorspulen verhindern: wenn mehr als 3s vorgesprungen, zurücksetzen
+  if (current > state.maxWatchedTime + 3) {
+    p.seekTo(state.maxWatchedTime, true);
+    showToast('Bitte das Video nicht vorspulen! 😅', 'error');
+    return;
+  }
+  state.maxWatchedTime = Math.max(state.maxWatchedTime, current);
+
   const pct = (current / duration) * 100;
   state.videoProgress = pct;
   document.getElementById('video-progress-fill').style.width = Math.min(pct, 100) + '%';
 
-  if (pct >= 50 && !state.videoDone) {
+  const remaining = Math.ceil((duration - current) / 60);
+  if (!state.videoDone) {
+    document.getElementById('video-hint').textContent =
+      pct < 95 ? `Schau das gesamte Video — noch ca. ${remaining} Min` : '✅ Video vollständig geschaut!';
+  }
+
+  if (pct >= 95 && !state.videoDone) {
     state.videoDone = true;
-    document.getElementById('video-hint').textContent = '✅ Video-Mindestzeit erreicht!';
+    document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
     document.getElementById('video-hint').style.color = 'var(--green)';
     checkContinueUnlock();
   }
@@ -336,11 +359,17 @@ function checkContinueUnlock() {
 
 function unlockQuiz() {
   state.quizUnlocked = true;
+
+  // Lektion ausblenden damit nicht abgeschrieben werden kann
+  document.getElementById('lesson-content').style.display = 'none';
+  document.getElementById('video-section').style.display = 'none';
+  document.getElementById('chat-section').style.display = 'none';
+  document.getElementById('timer-notice').style.display = 'none';
+
   document.getElementById('quiz-section').classList.remove('hidden');
   document.getElementById('continue-btn').disabled = true;
-  document.getElementById('footer-info').textContent = 'Beantworte die Fragen';
+  document.getElementById('footer-info').textContent = 'Beantworte die Fragen mit eigenen Worten (min. 25 Wörter)';
 
-  // Render questions
   const container = document.getElementById('quiz-questions');
   container.innerHTML = '';
   state.quizQuestions.forEach((q, i) => {
@@ -348,16 +377,52 @@ function unlockQuiz() {
     div.className = 'quiz-question';
     div.innerHTML = `
       <div class="quiz-question__text">${i + 1}. ${q}</div>
-      <div class="quiz-question__input">
-        <textarea placeholder="Deine Antwort…" id="quiz-answer-${i}" rows="3"></textarea>
+      <div class="quiz-question__input" style="display:flex;gap:8px;align-items:flex-start">
+        <textarea placeholder="Erkläre mit eigenen Worten — mindestens 25 Wörter…" id="quiz-answer-${i}" rows="4" style="flex:1"></textarea>
+        <button class="btn btn-secondary btn-sm" id="mic-btn-${i}" title="Spracheingabe" style="padding:8px;font-size:1.2rem;flex-shrink:0">🎤</button>
       </div>
+      <div class="quiz-word-count text-muted text-sm" id="quiz-wc-${i}">0 Wörter</div>
       <div class="quiz-feedback hidden" id="quiz-feedback-${i}"></div>
     `;
     container.appendChild(div);
+
+    // Wort-Zähler
+    document.getElementById(`quiz-answer-${i}`).addEventListener('input', () => {
+      const wc = countWords(document.getElementById(`quiz-answer-${i}`).value);
+      const el = document.getElementById(`quiz-wc-${i}`);
+      el.textContent = `${wc} Wörter ${wc >= 25 ? '✅' : '(min. 25)'}`;
+      el.style.color = wc >= 25 ? 'var(--green)' : '';
+    });
+
+    // Spracheingabe
+    document.getElementById(`mic-btn-${i}`).addEventListener('click', () => startVoiceInput(i));
   });
 
   document.getElementById('quiz-submit').addEventListener('click', submitQuiz);
   document.getElementById('quiz-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function countWords(text) {
+  return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+}
+
+function startVoiceInput(index) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('Spracherkennung nicht unterstützt (Chrome empfohlen)', 'error'); return; }
+  const rec = new SR();
+  rec.lang = 'de-DE';
+  rec.interimResults = false;
+  const btn = document.getElementById(`mic-btn-${index}`);
+  btn.textContent = '🔴';
+  btn.disabled = true;
+  rec.onresult = e => {
+    const ta = document.getElementById(`quiz-answer-${index}`);
+    ta.value += (ta.value ? ' ' : '') + e.results[0][0].transcript;
+    ta.dispatchEvent(new Event('input'));
+  };
+  rec.onerror = () => showToast('Spracherkennung fehlgeschlagen', 'error');
+  rec.onend = () => { btn.textContent = '🎤'; btn.disabled = false; };
+  rec.start();
 }
 
 /* ─── Quiz submit ─── */
@@ -374,6 +439,15 @@ async function submitQuiz() {
 
     if (!answer) {
       feedback.textContent = 'Bitte beantworte diese Frage.';
+      feedback.className = 'quiz-feedback fail';
+      feedback.classList.remove('hidden');
+      allPassed = false;
+      continue;
+    }
+
+    const wc = countWords(answer);
+    if (wc < 25) {
+      feedback.textContent = `Zu kurz! Du hast nur ${wc} Wörter — bitte mindestens 25 Wörter in eigenen Worten schreiben.`;
       feedback.className = 'quiz-feedback fail';
       feedback.classList.remove('hidden');
       allPassed = false;
