@@ -11,12 +11,20 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Ensure bucket exists
+    const { data: buckets } = await sb.storage.listBuckets();
+    const exists = (buckets || []).some(b => b.name === 'challenge-photos');
+    if (!exists) {
+      await sb.storage.createBucket('challenge-photos', { public: true });
+    }
+
     // Decode base64 to buffer
     const base64Data = fileBase64.replace(/^data:[^;]+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
     const ext  = (fileName || 'photo.jpg').split('.').pop().toLowerCase();
-    const path = `${userId}/${challengeId}/${Date.now()}.${ext}`;
+    const safe = ['jpg','jpeg','png','gif','webp'].includes(ext) ? ext : 'jpg';
+    const path = `${userId}/${challengeId}/${Date.now()}.${safe}`;
 
     const { error } = await sb.storage
       .from('challenge-photos')
