@@ -61,6 +61,7 @@ async function initLesson() {
   setupScrollProgress();
   setupChat();
   setupBreakHandlers();
+  setupVideoExpand();
 
   // Load YouTube API
   loadYouTubeAPI();
@@ -110,24 +111,14 @@ function startBreak() {
   document.getElementById('break-reminder').classList.add('hidden');
   document.getElementById('break-screen').classList.remove('hidden');
   state.breakActive = true;
-  state.breakCountdown = BREAK_DUR_S;
 
-  // Fetch break video
+  // Pause lesson video while on break
+  if (state.youtubePlayer && typeof state.youtubePlayer.pauseVideo === 'function') {
+    try { state.youtubePlayer.pauseVideo(); } catch {}
+  }
+
   fetchBreakVideo();
-
-  state.breakInterval = setInterval(() => {
-    state.breakCountdown--;
-    const m = Math.floor(state.breakCountdown / 60);
-    const s = state.breakCountdown % 60;
-    document.getElementById('break-countdown').textContent =
-      `${m}:${s.toString().padStart(2,'0')}`;
-
-    if (state.breakCountdown <= 0) {
-      clearInterval(state.breakInterval);
-      document.getElementById('break-countdown').textContent = '0:00';
-      showCheckin();
-    }
-  }, 1000);
+  setupCheckin();
 }
 
 async function fetchBreakVideo() {
@@ -135,33 +126,56 @@ async function fetchBreakVideo() {
     const res = await fetch('/api/youtube-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ searchTerm: 'Kinder Bewegungspause Mitmachvideo 5 Minuten', isBreak: true })
+      body: JSON.stringify({ searchTerm: 'Kinder Bewegungspause Mitmachvideo', isBreak: true })
     });
     const { videoId } = await res.json();
-    if (videoId) {
-      const container = document.getElementById('break-video-container');
-      // controls=0: keine YouTube-Controls/Links, autoplay, kein Redirect möglich
-      container.innerHTML = `
-        <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1&playsinline=1"
-          allow="autoplay; encrypted-media" allowfullscreen></iframe>
-        <div style="position:absolute;inset:0;cursor:default"></div>`;
+    if (!videoId) {
+      document.getElementById('break-video-status').textContent = 'Kein Video gefunden — mach trotzdem eine kurze Pause! 🏃';
+      // Show checkin after 60s fallback
+      setTimeout(showCheckin, 60000);
+      return;
     }
-  } catch {}
+
+    const container = document.getElementById('break-video-container');
+    container.innerHTML = `<div id="break-yt-player" style="position:absolute;inset:0"></div>`;
+    document.getElementById('break-video-status').textContent = '▶️ Mach mit!';
+
+    const tryCreate = () => {
+      if (!window.YT || !window.YT.Player) { setTimeout(tryCreate, 300); return; }
+      state.breakPlayer = new YT.Player('break-yt-player', {
+        videoId,
+        width: '100%', height: '100%',
+        playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
+        events: {
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) showCheckin();
+          }
+        }
+      });
+    };
+    tryCreate();
+  } catch {
+    document.getElementById('break-video-status').textContent = 'Video konnte nicht geladen werden.';
+    setTimeout(showCheckin, 60000);
+  }
 }
 
 function showCheckin() {
-  document.getElementById('break-countdown').style.display = 'none';
-  // Hide video, show checkin
+  // Stop break video
+  try { state.breakPlayer?.stopVideo?.(); } catch {}
   document.getElementById('break-video-wrap').style.display = 'none';
+  document.getElementById('break-video-status').style.display = 'none';
   document.getElementById('checkin-form').classList.remove('hidden');
+}
 
+function setupCheckin() {
   document.querySelectorAll('.checkin-emojis button').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       document.getElementById('checkin-done').disabled = false;
     });
-  });
+  }, { once: true });
 
   document.getElementById('checkin-done').addEventListener('click', async () => {
     state.activeMs = 0;
@@ -169,20 +183,40 @@ function showCheckin() {
     state.breakActive = false;
     localStorage.setItem(LS_ACTIVE_KEY, '0');
 
-    // Properly increment breaks_taken
-    if (state.sessionId) {
-      const { data } = await state.sb.from('sessions')
-        .select('breaks_taken').eq('id', state.sessionId).single().catch(() => ({ data: null }));
-      if (data) {
-        await state.sb.from('sessions')
-          .update({ breaks_taken: (data.breaks_taken || 0) + 1 })
-          .eq('id', state.sessionId).catch(() => {});
+    try {
+      if (state.sessionId) {
+        const { data } = await state.sb.from('sessions')
+          .select('breaks_taken').eq('id', state.sessionId).single();
+        if (data) {
+          await state.sb.from('sessions')
+            .update({ breaks_taken: (data.breaks_taken || 0) + 1 })
+            .eq('id', state.sessionId);
+        }
       }
-    }
+    } catch {}
 
-    document.getElementById('break-screen').classList.add('hidden');
+    // Reset break screen for potential next break
     document.getElementById('break-video-wrap').style.display = '';
+    document.getElementById('break-video-status').style.display = '';
+    document.getElementById('break-video-status').textContent = '⏳ Lade Bewegungsvideo…';
+    document.getElementById('break-video-container').innerHTML = '';
+    document.getElementById('checkin-form').classList.add('hidden');
+    document.getElementById('checkin-done').disabled = true;
+    document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
+    document.getElementById('break-screen').classList.add('hidden');
+
     showToast('Super! Weiter geht\'s! 💪', 'success');
+  }, { once: true });
+}
+
+function setupVideoExpand() {
+  const btn     = document.getElementById('video-expand-btn');
+  const section = document.getElementById('video-section');
+  if (!btn || !section) return;
+  btn.addEventListener('click', () => {
+    const isExpanded = section.classList.toggle('video-section--expanded');
+    section.classList.toggle('video-section--compact', !isExpanded);
+    btn.textContent = isExpanded ? '✕ Verkleinern' : '⛶ Vergrößern';
   });
 }
 

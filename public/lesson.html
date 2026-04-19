@@ -44,8 +44,11 @@
     </div>
 
     <!-- Video -->
-    <div class="video-section" id="video-section">
-      <div class="video-section__label">🎬 Passendes Video dazu</div>
+    <div class="video-section video-section--compact" id="video-section">
+      <div class="video-section__header">
+        <div class="video-section__label">🎬 Passendes Video dazu</div>
+        <button class="video-expand-btn" id="video-expand-btn" title="Vollbild">⛶ Vergrößern</button>
+      </div>
       <div class="video-wrapper" id="video-wrapper">
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
           <div class="spinner"></div>
@@ -55,7 +58,7 @@
         <div class="video-progress-bar__fill" id="video-progress-fill" style="width:0%"></div>
       </div>
       <div style="font-size:.8rem;color:var(--muted);margin-top:4px" id="video-hint">
-        Schau mindestens 50% des Videos bevor du weitermachst
+        Schau das gesamte Video um weiterzumachen
       </div>
     </div>
 
@@ -134,11 +137,11 @@
   <div class="break-overlay hidden" id="break-screen">
     <div class="break-overlay__emoji">🏃‍♂️</div>
     <h2 class="break-overlay__title">Aktive Pause!</h2>
-    <p class="break-overlay__sub">5 Minuten Bewegung — dann geht's weiter!</p>
-    <div class="break-timer" id="break-countdown">5:00</div>
+    <p class="break-overlay__sub">Mach mit — wenn das Video fertig ist, geht's weiter!</p>
     <div class="break-video-wrap" id="break-video-wrap">
-      <div id="break-video-container"></div>
+      <div id="break-video-container" style="position:relative;width:100%;aspect-ratio:16/9;max-width:560px"></div>
     </div>
+    <div class="break-video-status" id="break-video-status">⏳ Lade Bewegungsvideo…</div>
     <!-- Check-in after break -->
     <div class="checkin-form hidden" id="checkin-form">
       <h3 style="margin-bottom:8px">Wie fühlst du dich jetzt?</h3>
@@ -148,7 +151,7 @@
         <button data-feeling="ok">😐</button>
         <button data-feeling="müde">😴</button>
       </div>
-      <button class="btn btn-primary" id="checkin-done" disabled>Weiterlernen!</button>
+      <button class="btn btn-primary" id="checkin-done" disabled>Weiterlernen! 💪</button>
     </div>
   </div>
 

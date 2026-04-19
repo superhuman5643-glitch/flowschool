@@ -98,11 +98,34 @@
   margin-bottom: 24px;
   animation: fadeUp .4s ease .2s both;
 }
+.video-section__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
 .video-section__label {
   display: flex; align-items: center; gap: 8px;
   font-size: .85rem; color: var(--muted);
-  margin-bottom: 10px;
 }
+.video-expand-btn {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 4px 10px;
+  font-size: .75rem; color: var(--muted); cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+  font-family: 'DM Sans', sans-serif;
+}
+.video-expand-btn:hover { border-color: var(--purple); color: var(--text); }
+
+/* Compact: fixed small height */
+.video-section--compact .video-wrapper {
+  padding-top: 0;
+  height: 200px;
+}
+/* Expanded: full 16:9 */
+.video-section--expanded .video-wrapper {
+  padding-top: 56.25%;
+  height: auto;
+}
+
 .video-wrapper {
   position: relative;
   padding-top: 56.25%;
@@ -110,6 +133,7 @@
   overflow: hidden;
   background: var(--card);
   border: 1px solid var(--border);
+  transition: padding-top .3s ease, height .3s ease;
 }
 .video-wrapper iframe {
   position: absolute; inset: 0;
@@ -319,13 +343,16 @@
   border-radius: var(--radius);
 }
 #break-video-container iframe,
-#break-video-container > div:last-child {
+#break-video-container > div {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
-  pointer-events: none;
+}
+.break-video-status {
+  font-size: .85rem; color: var(--muted);
+  margin-bottom: 8px;
 }
 .checkin-form {
   width: 100%; max-width: 400px;
