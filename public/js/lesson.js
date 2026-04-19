@@ -29,6 +29,7 @@ let state = {
   breakInterval: null,
   youtubePlayer: null,
   ytCheckInterval: null,
+  seekLockUntil: null,
   sessionId: null
 };
 
@@ -410,38 +411,51 @@ function activateYTPlayer(videoId) {
   const wrapper = document.getElementById('video-wrapper');
   wrapper.innerHTML = `<div id="yt-player" style="position:absolute;inset:0"></div>`;
 
+  if (state.ytCheckInterval) { clearInterval(state.ytCheckInterval); state.ytCheckInterval = null; }
+
   const tryCreate = () => {
     if (!window.YT || !window.YT.Player) { setTimeout(tryCreate, 300); return; }
     state.youtubePlayer = new YT.Player('yt-player', {
       videoId,
       width: '100%', height: '100%',
       playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
-      events: { onStateChange: onYTStateChange }
+      events: {
+        onReady: () => { state.ytCheckInterval = setInterval(updateVideoProgress, 500); },
+        onStateChange: onYTStateChange
+      }
     });
   };
   tryCreate();
-  state.ytCheckInterval = setInterval(updateVideoProgress, 1000);
 }
 
 function onYTStateChange(event) {
-  // Check for seek attempt immediately on any state change
-  updateVideoProgress();
+  // Only check seek on PAUSED (2) or PLAYING (1) — not on BUFFERING (3) to avoid false triggers
+  if (event.data === 1 || event.data === 2) {
+    updateVideoProgress(event.target);
+  }
 }
 
-function updateVideoProgress() {
-  const p = state.youtubePlayer;
+function updateVideoProgress(playerArg) {
+  const p = playerArg || state.youtubePlayer;
   if (!p || typeof p.getDuration !== 'function') return;
   const duration = p.getDuration();
   const current  = p.getCurrentTime();
-  if (!duration) return;
+  if (!duration || current == null) return;
 
-  // Vorspulen verhindern: kein Sprung mehr als 1s über maxWatchedTime
-  if (current > state.maxWatchedTime + 1) {
-    p.seekTo(state.maxWatchedTime, true);
-    showToast('⏪ Vorspulen ist nicht erlaubt!', 'error');
+  // Vorspulen verhindern — lock prevents seekTo from triggering another seekTo
+  const now = Date.now();
+  if (current > state.maxWatchedTime + 2) {
+    if (!state.seekLockUntil || now > state.seekLockUntil) {
+      state.seekLockUntil = now + 1500;
+      p.seekTo(state.maxWatchedTime, true);
+      showToast('⏪ Vorspulen ist nicht erlaubt!', 'error');
+    }
     return;
   }
-  state.maxWatchedTime = Math.max(state.maxWatchedTime, current);
+
+  if (!state.seekLockUntil || now > state.seekLockUntil) {
+    state.maxWatchedTime = Math.max(state.maxWatchedTime, current);
+  }
 
   const pct = (current / duration) * 100;
   state.videoProgress = pct;
