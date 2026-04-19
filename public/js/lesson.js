@@ -56,14 +56,8 @@ async function initLesson() {
   // Restore active time from localStorage
   state.activeMs = parseInt(localStorage.getItem(LS_ACTIVE_KEY) || '0', 10);
 
-  // Testuser: break triggers after 5 seconds for testing
-  if (state.user.email === 'testuser@flowschool.app') {
-    window._BREAK_WARN_MS  = 5000;
-    window._BREAK_FORCE_MS = 8000;
-  } else {
-    window._BREAK_WARN_MS  = BREAK_WARN_MS;
-    window._BREAK_FORCE_MS = BREAK_FORCE_MS;
-  }
+  window._BREAK_WARN_MS  = BREAK_WARN_MS;
+  window._BREAK_FORCE_MS = BREAK_FORCE_MS;
 
   await startSession();
   startActiveTimer();
