@@ -455,18 +455,25 @@ async function showLessons(sb, userId, subject) {
     if (freshLessons?.length) {
       list.innerHTML = '';
       freshLessons.forEach((lesson, i) => {
+        const locked = i > 0; // only first lesson unlocked for brand new subject
         const item = document.createElement('div');
-        item.className = 'lesson-item';
+        item.className = `lesson-item${locked ? ' lesson-item--locked' : ''}`;
         item.style.animationDelay = `${i * 0.05}s`;
         item.innerHTML = `
-          <div class="lesson-item__number">${i + 1}</div>
-          <div class="lesson-item__title">${lesson.title}</div>
-          <div class="lesson-item__meta">${lesson.duration_minutes} Min</div>
+          <div class="lesson-item__number">${locked ? '🔒' : i + 1}</div>
+          <div class="lesson-item__body">
+            <div class="lesson-item__title">${lesson.title}</div>
+            <div class="lesson-item__meta">${lesson.duration_minutes} Min${locked ? ' · gesperrt' : ''}</div>
+          </div>
         `;
-        item.addEventListener('click', () => {
-          const params = new URLSearchParams({ lessonId: lesson.id, subjectId: subject.id, subjectName: subject.name, title: lesson.title });
-          window.location.href = `/lesson?${params}`;
-        });
+        if (locked) {
+          item.addEventListener('click', () => showToast('Schließe erst die vorherige Lektion ab! 🔒', 'error'));
+        } else {
+          item.addEventListener('click', () => {
+            const params = new URLSearchParams({ lessonId: lesson.id, subjectId: subject.id, subjectName: subject.name, title: lesson.title });
+            window.location.href = `/lesson?${params}`;
+          });
+        }
         list.appendChild(item);
       });
     } else {
@@ -475,13 +482,16 @@ async function showLessons(sb, userId, subject) {
     return;
   }
 
-  // Group by level (5 per level)
+  // Sort globally by sort_order, then group by level
+  const sorted = [...(lessons || [])].sort((a, b) => a.sort_order - b.sort_order);
   const grouped = {};
-  (lessons || []).forEach(lesson => {
+  sorted.forEach(lesson => {
     const lvl = Math.ceil(lesson.sort_order / 5);
     if (!grouped[lvl]) grouped[lvl] = [];
     grouped[lvl].push(lesson);
   });
+
+  let previousDone = true; // first lesson always unlocked
 
   Object.entries(grouped).forEach(([lvl, lvlLessons]) => {
     const levelHeader = document.createElement('div');
@@ -490,25 +500,36 @@ async function showLessons(sb, userId, subject) {
     list.appendChild(levelHeader);
 
     lvlLessons.forEach((lesson, i) => {
-      const prog = progressMap[lesson.id];
-      const done = prog?.completed || false;
+      const prog   = progressMap[lesson.id];
+      const done   = prog?.completed || false;
+      const locked = !previousDone;
+      const num    = (parseInt(lvl) - 1) * 5 + i + 1;
 
       const item = document.createElement('div');
-      item.className = `lesson-item${done ? ' completed' : ''}`;
+      item.className = `lesson-item${done ? ' completed' : ''}${locked ? ' lesson-item--locked' : ''}`;
       item.style.animationDelay = `${i * 0.05}s`;
       item.innerHTML = `
-        <div class="lesson-item__number">${done ? '✓' : ((parseInt(lvl) - 1) * 5 + i + 1)}</div>
-        <div class="lesson-item__title">${lesson.title}</div>
-        <div class="lesson-item__meta">${lesson.duration_minutes} Min${done ? ' · ✓' : ''}</div>
+        <div class="lesson-item__number">${done ? '✓' : locked ? '🔒' : num}</div>
+        <div class="lesson-item__body">
+          <div class="lesson-item__title">${lesson.title}</div>
+          <div class="lesson-item__meta">${lesson.duration_minutes} Min${done ? ' · ✓' : locked ? ' · gesperrt' : ''}</div>
+        </div>
       `;
-      item.addEventListener('click', () => {
-        const params = new URLSearchParams({
-          lessonId: lesson.id, subjectId: subject.id,
-          subjectName: subject.name, title: lesson.title
+
+      if (locked) {
+        item.addEventListener('click', () => showToast('Schließe erst die vorherige Lektion ab! 🔒', 'error'));
+      } else {
+        item.addEventListener('click', () => {
+          const params = new URLSearchParams({
+            lessonId: lesson.id, subjectId: subject.id,
+            subjectName: subject.name, title: lesson.title
+          });
+          window.location.href = `/lesson?${params}`;
         });
-        window.location.href = `/lesson?${params}`;
-      });
+      }
+
       list.appendChild(item);
+      previousDone = done;
     });
   });
 }

@@ -555,8 +555,23 @@ details[open] .xp-info-accordion__toggle::after { transform: rotate(180deg); }
   border-color: var(--green);
   color: var(--green);
 }
-.lesson-item__title { flex: 1; font-size: .95rem; }
-.lesson-item__meta { font-size: .8rem; color: var(--muted); }
+.lesson-item__body { flex: 1; min-width: 0; }
+.lesson-item__title { font-size: .95rem; }
+.lesson-item__meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+
+.lesson-item--locked {
+  opacity: .55;
+  cursor: default;
+}
+.lesson-item--locked:hover {
+  background: var(--card);
+  border-color: var(--border);
+}
+.lesson-item--locked .lesson-item__number {
+  font-size: .9rem;
+  background: none;
+  border-color: var(--border);
+}
 
 /* ─── Back button ─── */
 .back-btn {
