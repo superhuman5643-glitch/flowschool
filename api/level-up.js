@@ -91,7 +91,7 @@ Erstelle 5 fortgeschrittenere Lektionstitel die auf Level ${completedLevel} aufb
           level: completedLevel,
           title: cTitle,
           description: cDesc,
-          bonus_xp: 50
+          bonus_xp: 250
         }, { onConflict: 'subject_id,level', ignoreDuplicates: true });
       } catch (cErr) {
         console.error('challenge generation error:', cErr);

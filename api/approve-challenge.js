@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
     if (!sub) return res.status(404).json({ error: 'Not found' });
 
-    const bonusXp = sub.challenges?.bonus_xp || 50;
+    const bonusXp = sub.challenges?.bonus_xp || 250;
 
     await sb.from('challenge_submissions').update({
       status: 'approved',

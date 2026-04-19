@@ -245,7 +245,7 @@ async function loadChallengeReviews(sb, lennyId) {
     const actionsHtml = sub.status === 'approved'
       ? `<div class="challenge-review-item__approved">✅ Bestätigt · +${sub.xp_awarded || 50} XP</div>`
       : `<div class="challenge-review-item__actions">
-           <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px" data-id="${sub.id}">✅ Bestätigen (+50 XP)</button>
+           <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px" data-id="${sub.id}">✅ Bestätigen (+250 XP)</button>
          </div>`;
 
     item.innerHTML = `
@@ -274,7 +274,7 @@ async function loadChallengeReviews(sb, lennyId) {
           await loadChallengeReviews(sb, lennyId);
         } catch {
           btn.disabled = false;
-          btn.textContent = '✅ Bestätigen (+50 XP)';
+          btn.textContent = '✅ Bestätigen (+250 XP)';
           showToast('Fehler beim Bestätigen.', 'error');
         }
       });
