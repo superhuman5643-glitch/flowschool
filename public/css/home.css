@@ -150,6 +150,34 @@
   50%       { box-shadow: 0 0 22px rgba(255,106,158,.8); }
 }
 
+/* ─── Extras gate notice ─── */
+.extras-gate-notice {
+  background: rgba(124,106,255,.08);
+  border: 1px solid rgba(124,106,255,.2);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: .85rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+/* ─── Locked subject card ─── */
+.subject-card--locked {
+  opacity: .5;
+  cursor: default;
+  filter: grayscale(.4);
+}
+.subject-card--locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+.subject-card__lock {
+  position: absolute;
+  top: 12px; right: 12px;
+  font-size: 1.1rem;
+  z-index: 2;
+}
+
 /* ─── XP Info Accordion ─── */
 .xp-info-accordion {
   background: var(--card);

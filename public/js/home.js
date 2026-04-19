@@ -1,15 +1,34 @@
 /* ── FlowSchool — Home page ── */
 
 const STICKER_MAP = {
-  'Emotionale Intelligenz':    ['💛','🧡','❤️','💜','🌈'],
-  'Finanzielle Intelligenz':   ['💰','💎','👑','🏆','🌟'],
-  'KI verstehen & beherrschen':['🤖','🧠','⚡','🚀','✨'],
+  'Emotionale Intelligenz':       ['💛','🧡','❤️','💜','🌈'],
+  'Finanzielle Intelligenz':      ['💰','💎','👑','🏆','🌟'],
+  'KI verstehen & beherrschen':   ['🤖','🧠','⚡','🚀','✨'],
+  'Bau dein eigenes Business':    ['🌱','🛒','💡','📈','🏆'],
 };
 const DEFAULT_STICKERS = ['⭐','🌟','💫','🎯','🏅'];
 
 function stickerFor(subjectName, level) {
   const list = STICKER_MAP[subjectName] || DEFAULT_STICKERS;
   return list[(level - 1) % list.length];
+}
+
+/* ─── Ensure 4th core subject exists ─── */
+async function ensureBusinessSubject(sb) {
+  const { data } = await sb.from('subjects').select('id')
+    .eq('name', 'Bau dein eigenes Business').maybeSingle();
+  if (data) return;
+  await sb.from('subjects').insert({
+    name: 'Bau dein eigenes Business',
+    emoji: '🏪',
+    description: 'Von der Idee zum ersten Verdienst — baue Schritt für Schritt dein eigenes kleines Business auf.',
+    color_from: '#ffcc6a',
+    color_to: '#6affcc',
+    is_mandatory: true,
+    is_default: true,
+    sort_order: 4,
+    unlock_xp: 0
+  });
 }
 
 async function initHome() {
@@ -46,117 +65,155 @@ async function loadStats(sb, userId) {
 
 /* ─── Subjects ─── */
 async function loadSubjects(sb, userId) {
-  // Mandatory subjects
-  const { data: mandatory } = await sb
-    .from('subjects')
-    .select('*')
-    .eq('is_mandatory', true)
-    .order('sort_order');
+  await ensureBusinessSubject(sb);
 
-  // Unlocked optional subjects
-  const { data: unlockedRows } = await sb
-    .from('unlocked_subjects')
-    .select('subject_id')
-    .eq('user_id', userId);
-
-  let optional = [];
+  // Fetch subjects
+  const { data: mandatory } = await sb.from('subjects').select('*').eq('is_mandatory', true).order('sort_order');
+  const { data: unlockedRows } = await sb.from('unlocked_subjects').select('subject_id').eq('user_id', userId);
   const unlockedIds = (unlockedRows || []).map(r => r.subject_id);
+  let optional = [];
   if (unlockedIds.length > 0) {
     const { data } = await sb.from('subjects').select('*').in('id', unlockedIds).order('sort_order');
     optional = data || [];
   }
 
-  const subjects = [...(mandatory || []), ...optional];
+  // Progress + lessons
+  const { data: allProgress } = await sb.from('progress').select('lesson_id, completed, completed_at').eq('user_id', userId);
+  const { data: allLessons }  = await sb.from('lessons').select('id, subject_id, sort_order');
 
-  // Progress data
-  const { data: allProgress } = await sb
-    .from('progress').select('lesson_id, completed').eq('user_id', userId);
-  const { data: allLessons } = await sb
-    .from('lessons').select('id, subject_id, sort_order');
-
-  // Stickers already earned
-  const { data: stickers } = await sb
-    .from('level_stickers').select('subject_id, level, sticker_emoji').eq('user_id', userId);
+  // Stickers
+  const { data: stickers } = await sb.from('level_stickers').select('subject_id, level, sticker_emoji').eq('user_id', userId);
   const stickersBySubject = {};
   (stickers || []).forEach(s => {
     if (!stickersBySubject[s.subject_id]) stickersBySubject[s.subject_id] = [];
     stickersBySubject[s.subject_id].push(s);
   });
 
-  // Build progress map per subject
+  // Progress map per subject
+  const completedIds = new Set((allProgress || []).filter(p => p.completed).map(p => p.lesson_id));
   const progressBySubject = {};
-  if (allLessons && allProgress) {
-    const completedIds = new Set((allProgress || []).filter(p => p.completed).map(p => p.lesson_id));
-    allLessons.forEach(l => {
-      if (!progressBySubject[l.subject_id]) progressBySubject[l.subject_id] = { total: 0, done: 0 };
-      progressBySubject[l.subject_id].total++;
-      if (completedIds.has(l.id)) progressBySubject[l.subject_id].done++;
+  (allLessons || []).forEach(l => {
+    if (!progressBySubject[l.subject_id]) progressBySubject[l.subject_id] = { total: 0, done: 0 };
+    progressBySubject[l.subject_id].total++;
+    if (completedIds.has(l.id)) progressBySubject[l.subject_id].done++;
+  });
+
+  // ── Daily gate ──
+  const todayISO = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+  const mandatorySubjectIds = new Set((mandatory || []).map(s => s.id));
+  const mandatoryLessonIds  = new Set((allLessons || []).filter(l => mandatorySubjectIds.has(l.subject_id)).map(l => l.id));
+  const optionalLessonIds   = new Set((allLessons || []).filter(l => !mandatorySubjectIds.has(l.subject_id)).map(l => l.id));
+
+  const todayDone = new Set(
+    (allProgress || []).filter(p => p.completed && p.completed_at >= todayISO).map(p => p.lesson_id)
+  );
+  const coreDoneToday = [...todayDone].filter(id => mandatoryLessonIds.has(id)).length;
+  const extraSubjectsDoneToday = new Set(
+    (allLessons || []).filter(l => optionalLessonIds.has(l.id) && todayDone.has(l.id)).map(l => l.subject_id)
+  );
+  let slotsRemaining = coreDoneToday - extraSubjectsDoneToday.size;
+
+  // ── Render Kernfächer ──
+  const kernGrid = document.getElementById('kernfaecher-grid');
+  kernGrid.innerHTML = '';
+  const levelUpQueue = [];
+
+  (mandatory || []).forEach((subject, i) => {
+    const card = buildSubjectCard(subject, i, progressBySubject, stickersBySubject, levelUpQueue, sb, userId, false);
+    kernGrid.appendChild(card);
+  });
+
+  // ── Render Extras ──
+  const extrasSection = document.getElementById('extras-section');
+  const extrasGrid    = document.getElementById('extras-grid');
+  const gateLabel     = document.getElementById('extras-gate-label');
+  const gateNotice    = document.getElementById('extras-gate-notice');
+
+  if (optional.length > 0) {
+    extrasSection.classList.remove('hidden');
+    extrasGrid.innerHTML = '';
+
+    if (coreDoneToday === 0) {
+      gateLabel.textContent = '🔒 heute gesperrt';
+      gateNotice.classList.remove('hidden');
+    } else {
+      gateLabel.textContent = `${extraSubjectsDoneToday.size}/${coreDoneToday} heute genutzt`;
+      gateNotice.classList.add('hidden');
+    }
+
+    optional.forEach((subject, i) => {
+      const doneToday = extraSubjectsDoneToday.has(subject.id);
+      let locked = false;
+      if (!doneToday) {
+        if (coreDoneToday === 0 || slotsRemaining <= 0) {
+          locked = true;
+        } else {
+          slotsRemaining--;
+        }
+      }
+      const card = buildSubjectCard(subject, i, progressBySubject, stickersBySubject, levelUpQueue, sb, userId, locked);
+      extrasGrid.appendChild(card);
     });
   }
 
-  const grid = document.getElementById('subject-grid');
-  grid.innerHTML = '';
-
-  const levelUpQueue = [];
-
-  subjects.forEach((subject, i) => {
-    const prog = progressBySubject[subject.id] || { total: 0, done: 0 };
-    const currentLevel = Math.floor(prog.done / 5) + 1;
-    const doneInLevel  = prog.done % 5;
-    const levelComplete = prog.total > 0 && doneInLevel === 0 && prog.done > 0;
-    const completedLevel = levelComplete ? prog.done / 5 : 0;
-
-    // Check if we need to award sticker + generate next level
-    const earned = (stickersBySubject[subject.id] || []).map(s => s.level);
-    if (levelComplete && completedLevel > 0 && !earned.includes(completedLevel)) {
-      levelUpQueue.push({ subject, completedLevel, prog });
-    }
-
-    const displayLevel = levelComplete ? currentLevel - 1 : currentLevel;
-    const displayDone  = levelComplete ? 5 : doneInLevel;
-    const pct          = Math.round((displayDone / 5) * 100);
-
-    const earnedStickers = (stickersBySubject[subject.id] || [])
-      .sort((a, b) => a.level - b.level)
-      .map(s => s.sticker_emoji).join('');
-
-    // Show "Level X freigeschaltet!" when user finished a level and new lessons exist
-    const hasNewLevel = levelComplete && prog.total > prog.done;
-    const newLevelNum = levelComplete ? currentLevel : 0;
-
-    const card = document.createElement('div');
-    card.className = 'subject-card';
-    card.style.animationDelay = `${i * 0.06}s`;
-    card.innerHTML = `
-      ${hasNewLevel ? `<div class="subject-card__new-level">🔓 Level ${newLevelNum} neu!</div>` : ''}
-      <div class="subject-card__bg" style="background:linear-gradient(135deg,${subject.color_from},${subject.color_to})"></div>
-      <div class="subject-card__body">
-        <span class="subject-card__emoji">${subject.emoji}</span>
-        <div class="subject-card__name">${subject.name}</div>
-        <div class="subject-card__meta">Level ${displayLevel} · ${displayDone}/5 Lektionen</div>
-        ${earnedStickers ? `<div class="subject-card__stickers">${earnedStickers}</div>` : ''}
-        <div class="progress-bar subject-card__progress">
-          <div class="progress-bar__fill" style="width:${pct}%"></div>
-        </div>
-      </div>
-    `;
-    card.addEventListener('click', () => showLessons(sb, userId, subject));
-    grid.appendChild(card);
-  });
-
-  // Process level-ups (award sticker + generate new lessons)
+  // Level-ups
   for (const { subject, completedLevel } of levelUpQueue) {
     await handleLevelUp(sb, userId, subject, completedLevel);
   }
 
-  // XP milestone check (include bonus XP)
+  // XP milestone check
   const [statsRes2, bonusRes2] = await Promise.all([
     sb.from('user_stats').select('xp_points').eq('user_id', userId).single(),
     sb.from('xp_bonus_log').select('xp').eq('user_id', userId)
   ]);
-  const baseXp  = statsRes2.data?.xp_points || 0;
+  const baseXp   = statsRes2.data?.xp_points || 0;
   const bonusXp2 = (bonusRes2.data || []).reduce((s, r) => s + (r.xp || 0), 0);
-  await checkXpMilestones(sb, userId, baseXp + bonusXp2, subjects);
+  await checkXpMilestones(sb, userId, baseXp + bonusXp2, [...(mandatory || []), ...optional]);
+}
+
+function buildSubjectCard(subject, i, progressBySubject, stickersBySubject, levelUpQueue, sb, userId, locked) {
+  const prog = progressBySubject[subject.id] || { total: 0, done: 0 };
+  const currentLevel  = Math.floor(prog.done / 5) + 1;
+  const doneInLevel   = prog.done % 5;
+  const levelComplete = prog.total > 0 && doneInLevel === 0 && prog.done > 0;
+  const completedLevel = levelComplete ? prog.done / 5 : 0;
+
+  const earned = (stickersBySubject[subject.id] || []).map(s => s.level);
+  if (levelComplete && completedLevel > 0 && !earned.includes(completedLevel)) {
+    levelUpQueue.push({ subject, completedLevel, prog });
+  }
+
+  const displayLevel = levelComplete ? currentLevel - 1 : currentLevel;
+  const displayDone  = levelComplete ? 5 : doneInLevel;
+  const pct          = Math.round((displayDone / 5) * 100);
+  const earnedStickers = (stickersBySubject[subject.id] || [])
+    .sort((a, b) => a.level - b.level).map(s => s.sticker_emoji).join('');
+  const hasNewLevel = levelComplete && prog.total > prog.done;
+
+  const card = document.createElement('div');
+  card.className = `subject-card${locked ? ' subject-card--locked' : ''}`;
+  card.style.animationDelay = `${i * 0.06}s`;
+  card.innerHTML = `
+    ${hasNewLevel ? `<div class="subject-card__new-level">🔓 Level ${levelComplete ? currentLevel : 0} neu!</div>` : ''}
+    ${locked ? '<div class="subject-card__lock">🔒</div>' : ''}
+    <div class="subject-card__bg" style="background:linear-gradient(135deg,${subject.color_from},${subject.color_to})"></div>
+    <div class="subject-card__body">
+      <span class="subject-card__emoji">${subject.emoji}</span>
+      <div class="subject-card__name">${subject.name}</div>
+      <div class="subject-card__meta">Level ${displayLevel} · ${displayDone}/5 Lektionen</div>
+      ${earnedStickers ? `<div class="subject-card__stickers">${earnedStickers}</div>` : ''}
+      <div class="progress-bar subject-card__progress">
+        <div class="progress-bar__fill" style="width:${pct}%"></div>
+      </div>
+    </div>
+  `;
+
+  if (locked) {
+    card.addEventListener('click', () => showToast('Mach erst eine Kernfach-Lektion — dann wird dieser Extra freigeschaltet! 💪', 'error'));
+  } else {
+    card.addEventListener('click', () => showLessons(sb, userId, subject));
+  }
+  return card;
 }
 
 /* ─── Level up ─── */

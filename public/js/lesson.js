@@ -53,8 +53,16 @@ async function initLesson() {
   document.getElementById('back-btn').addEventListener('click', () => history.back());
   document.getElementById('back-home-btn')?.addEventListener('click', () => window.location.href = '/home');
 
-  // Restore active time from localStorage
-  state.activeMs = parseInt(localStorage.getItem(LS_ACTIVE_KEY) || '0', 10);
+  // Restore active time from localStorage — reset if it's a new day
+  const savedDate = localStorage.getItem('fs_active_date');
+  const today = new Date().toISOString().split('T')[0];
+  if (savedDate !== today) {
+    localStorage.setItem(LS_ACTIVE_KEY, '0');
+    localStorage.setItem('fs_active_date', today);
+    state.activeMs = 0;
+  } else {
+    state.activeMs = parseInt(localStorage.getItem(LS_ACTIVE_KEY) || '0', 10);
+  }
 
   window._BREAK_WARN_MS  = BREAK_WARN_MS;
   window._BREAK_FORCE_MS = BREAK_FORCE_MS;
@@ -95,6 +103,7 @@ function startActiveTimer() {
     if (document.hidden || state.breakActive) return;
     state.activeMs += 1000;
     localStorage.setItem(LS_ACTIVE_KEY, String(state.activeMs));
+    localStorage.setItem('fs_active_date', new Date().toISOString().split('T')[0]);
 
     if (!state.breakWarnShown && state.activeMs >= window._BREAK_WARN_MS) {
       state.breakWarnShown = true;

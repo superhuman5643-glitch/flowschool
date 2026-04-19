@@ -93,14 +93,24 @@
     <!-- XP Bonus Banner (shown when milestone reached) -->
     <div id="xp-bonus-banner" class="xp-bonus hidden"></div>
 
-    <!-- Subjects -->
-    <div class="section">
+    <!-- Kernfächer -->
+    <div class="section" id="kernfaecher-section">
       <div class="section__header">
-        <h2>Meine Themen</h2>
+        <h2>📚 Kernfächer</h2>
       </div>
-      <div class="subject-grid" id="subject-grid">
-        <!-- Injected by JS -->
+      <div class="subject-grid" id="kernfaecher-grid"></div>
+    </div>
+
+    <!-- Meine Extras -->
+    <div class="section hidden" id="extras-section">
+      <div class="section__header">
+        <h2>🎮 Meine Extras</h2>
+        <span class="badge-count" id="extras-gate-label"></span>
       </div>
+      <div class="extras-gate-notice hidden" id="extras-gate-notice">
+        🔒 Schließe heute eine Kernfach-Lektion ab, um Extras freizuschalten!
+      </div>
+      <div class="subject-grid" id="extras-grid"></div>
     </div>
 
     <!-- Challenges -->
