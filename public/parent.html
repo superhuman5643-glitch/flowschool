@@ -11,12 +11,12 @@
   <div id="page-loader"><div class="spinner spinner-lg"></div></div>
 
   <!-- Header -->
-  <header class="header">
-    <div class="header__logo">FlowSchool</div>
-    <div class="header__actions">
+  <header style="position:sticky;top:0;z-index:100;background:rgba(10,10,15,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">FlowSchool</div>
+    <div style="display:flex;align-items:center;gap:12px;">
       <span class="badge badge-new">Eltern-Ansicht</span>
-      <button class="btn btn-secondary btn-sm" id="logout-btn">Abmelden</button>
-      <div class="header__avatar" id="header-avatar" style="background:linear-gradient(135deg,#ff6a9e,#ffcc6a)">M</div>
+      <button class="btn btn-secondary btn-sm" id="logout-btn" style="cursor:pointer;">Abmelden</button>
+      <div id="header-avatar" style="width:36px;height:36px;background:linear-gradient(135deg,#ff6a9e,#ffcc6a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;cursor:pointer;color:#fff;flex-shrink:0;">M</div>
     </div>
   </header>
 
