@@ -1,12 +1,34 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@supabase/supabase-js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { subjectName, lessonTitle } = req.body;
+  const { subjectName, lessonTitle, userId } = req.body;
   if (!subjectName || !lessonTitle) return res.status(400).json({ error: 'Missing fields' });
+
+  // Fetch learning profile if userId provided
+  let profileCtx = '';
+  if (userId) {
+    const { data: profile } = await sb.from('child_profiles')
+      .select('*').eq('user_id', userId).single().catch(() => ({ data: null }));
+
+    if (profile) {
+      const parts = [];
+      if (profile.interests?.length)          parts.push(`Interessen: ${profile.interests.join(', ')}`);
+      if (profile.preferred_examples?.length) parts.push(`Bevorzugte Beispiele: ${profile.preferred_examples.join(', ')}`);
+      if (profile.strong_topics?.length)      parts.push(`Starke Themen: ${profile.strong_topics.join(', ')}`);
+      if (profile.weak_topics?.length)        parts.push(`Schwache Themen (extra erklären): ${profile.weak_topics.join(', ')}`);
+      if (profile.learning_notes)             parts.push(`Notizen: ${profile.learning_notes}`);
+      const level = profile.vocab_level === 3 ? 'fortgeschritten' : profile.vocab_level === 2 ? 'mittel' : 'einfach';
+      parts.push(`Vokabular-Level: ${level}`);
+
+      if (parts.length) profileCtx = `\n\nLennys Lernprofil:\n${parts.join('\n')}`;
+    }
+  }
 
   try {
     const message = await client.messages.create({
@@ -20,7 +42,9 @@ Nutze diese speziellen Klassen für Highlights:
 - <div class="highlight">wichtige Erkenntnis</div>
 - <div class="example">💡 Beispiel: ...</div>
 - <div class="fun-fact">🤯 Wusstest du: ...</div>
+${profileCtx}
 
+Wenn ein Lernprofil vorhanden ist: passe Beispiele, Analogien und Erklärungstiefe gezielt daran an.
 Antworte NUR mit validem JSON in exakt diesem Format:
 {
   "content": "<h2>...</h2><p>...</p>...",

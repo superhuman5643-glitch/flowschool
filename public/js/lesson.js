@@ -20,6 +20,7 @@ let state = {
   lessonContent: '',
   quizQuestions: [],
   quizResults: [],
+  quizAttempts: 0,
   breakWarnShown: false,
   breakActive: false,
   breakCountdown: BREAK_DUR_S,
@@ -142,7 +143,6 @@ async function fetchBreakVideo() {
       // controls=0: keine YouTube-Controls/Links, autoplay, kein Redirect möglich
       container.innerHTML = `
         <iframe src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1&playsinline=1"
-          style="position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none"
           allow="autoplay; encrypted-media" allowfullscreen></iframe>
         <div style="position:absolute;inset:0;cursor:default"></div>`;
     }
@@ -212,7 +212,8 @@ async function generateLesson() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subjectName: state.subjectName,
-        lessonTitle: state.title
+        lessonTitle: state.title,
+        userId: state.user?.id
       })
     });
     const data = await res.json();
@@ -431,6 +432,7 @@ async function submitQuiz() {
   btn.disabled = true;
   btn.textContent = 'Wird bewertet…';
 
+  state.quizAttempts++;
   let allPassed = true;
 
   for (let i = 0; i < state.quizQuestions.length; i++) {
@@ -499,6 +501,34 @@ async function completeLesson() {
     time_spent_seconds: Math.round(state.activeMs / 1000),
     completed_at: new Date().toISOString()
   }, { onConflict: 'user_id,lesson_id' });
+
+  // Update Gehirn — fire-and-forget
+  const quizAnswers = state.quizQuestions.map((_, i) =>
+    document.getElementById(`quiz-answer-${i}`)?.value?.trim() || '');
+
+  fetch('/api/update-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: state.user.id,
+      type: 'quiz',
+      data: { questions: state.quizQuestions, answers: quizAnswers,
+              passed: true, attempts: state.quizAttempts,
+              subject: state.subjectName, lessonTitle: state.title }
+    })
+  }).catch(() => {});
+
+  if (state.chatHistory.length >= 2) {
+    fetch('/api/update-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: state.user.id,
+        type: 'chat',
+        data: { chatHistory: state.chatHistory.slice(-12), lessonTitle: state.title }
+      })
+    }).catch(() => {});
+  }
 
   document.getElementById('quiz-section').classList.add('hidden');
   document.getElementById('complete-banner').classList.remove('hidden');
