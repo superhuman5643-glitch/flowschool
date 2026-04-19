@@ -23,7 +23,7 @@ async function initHome() {
   document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('header-avatar').addEventListener('click', logout);
 
-  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id)]);
+  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id), loadChallenges(sb, user.id)]);
   hideLoader();
 }
 
@@ -381,6 +381,153 @@ async function showLessons(sb, userId, subject) {
       });
       list.appendChild(item);
     });
+  });
+}
+
+/* ─── Challenges ─── */
+async function loadChallenges(sb, userId) {
+  // Find all levels the user has completed (has stickers for)
+  const { data: stickers } = await sb
+    .from('level_stickers')
+    .select('subject_id, level, subjects(name, emoji)')
+    .eq('user_id', userId);
+
+  if (!stickers || stickers.length === 0) return;
+
+  const subjectIds = [...new Set(stickers.map(s => s.subject_id))];
+  const { data: challenges } = await sb
+    .from('challenges')
+    .select('*')
+    .in('subject_id', subjectIds);
+
+  if (!challenges || challenges.length === 0) return;
+
+  // Only show challenges for levels the user has completed
+  const completedKey = new Set(stickers.map(s => `${s.subject_id}_${s.level}`));
+  const relevant = challenges.filter(c => completedKey.has(`${c.subject_id}_${c.level}`));
+  if (relevant.length === 0) return;
+
+  // Get submissions
+  const { data: submissions } = await sb
+    .from('challenge_submissions')
+    .select('*')
+    .eq('user_id', userId)
+    .in('challenge_id', relevant.map(c => c.id));
+
+  const subMap = {};
+  (submissions || []).forEach(s => { subMap[s.challenge_id] = s; });
+
+  // Build subject name lookup
+  const nameMap = {};
+  stickers.forEach(s => { if (s.subjects) nameMap[s.subject_id] = s.subjects; });
+
+  const section = document.getElementById('challenges-section');
+  const list    = document.getElementById('challenges-list');
+  const counter = document.getElementById('challenges-count');
+
+  const pending = relevant.filter(c => !subMap[c.id] || subMap[c.id].status === 'pending').length;
+  counter.textContent = pending > 0 ? `${pending} offen` : 'alle erledigt ✓';
+  section.classList.remove('hidden');
+  list.innerHTML = '';
+
+  relevant.forEach((challenge, i) => {
+    const sub     = subMap[challenge.id];
+    const subject = nameMap[challenge.subject_id] || {};
+    const card    = document.createElement('div');
+    card.className = 'challenge-card';
+    card.style.animationDelay = `${i * 0.07}s`;
+
+    let statusHtml = '';
+    let formHtml   = '';
+
+    if (sub?.status === 'approved') {
+      statusHtml = `<div class="challenge-card__status challenge-card__status--approved">✅ Von Mike bestätigt! +${sub.xp_awarded || 50} XP verdient</div>`;
+    } else if (sub?.status === 'pending') {
+      statusHtml = `<div class="challenge-card__status challenge-card__status--pending">⏳ Eingereicht — wartet auf Mikes Bestätigung</div>`;
+    } else {
+      formHtml = `
+        <div class="challenge-form" id="cform-${challenge.id}">
+          <textarea placeholder="Beschreibe kurz was du gemacht hast…" id="ctext-${challenge.id}"></textarea>
+          <div class="challenge-form__photo">
+            <label class="challenge-form__photo-label" for="cphoto-${challenge.id}">📷 Foto hinzufügen</label>
+            <input type="file" id="cphoto-${challenge.id}" accept="image/*" style="display:none" />
+            <span class="challenge-form__photo-name" id="cpname-${challenge.id}"></span>
+          </div>
+          <img class="challenge-photo-preview hidden" id="cpreview-${challenge.id}" />
+          <div class="challenge-form__actions">
+            <button class="btn btn-primary" id="csubmit-${challenge.id}">Einreichen 🚀</button>
+          </div>
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="challenge-card__header">
+        <div class="challenge-card__icon">${subject.emoji || '🎯'}</div>
+        <div class="challenge-card__info">
+          <div class="challenge-card__meta">${subject.name || ''} · Level ${challenge.level}</div>
+          <div class="challenge-card__title">${challenge.title}</div>
+          <div class="challenge-card__desc">${challenge.description}</div>
+        </div>
+      </div>
+      ${statusHtml}
+      ${formHtml}
+    `;
+    list.appendChild(card);
+
+    // Wire up form events
+    if (!sub) {
+      const photoInput = card.querySelector(`#cphoto-${challenge.id}`);
+      const photoName  = card.querySelector(`#cpname-${challenge.id}`);
+      const preview    = card.querySelector(`#cpreview-${challenge.id}`);
+      const submitBtn  = card.querySelector(`#csubmit-${challenge.id}`);
+
+      photoInput?.addEventListener('change', () => {
+        const file = photoInput.files[0];
+        if (!file) return;
+        photoName.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = e => {
+          preview.src = e.target.result;
+          preview.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      });
+
+      submitBtn?.addEventListener('click', async () => {
+        const text = document.getElementById(`ctext-${challenge.id}`)?.value.trim();
+        if (!text) { showToast('Bitte beschreibe was du gemacht hast.', 'error'); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wird hochgeladen…';
+
+        let photoUrl = null;
+        const file = photoInput?.files[0];
+        if (file) {
+          try {
+            const path = `${userId}/${challenge.id}/${Date.now()}_${file.name}`;
+            const { error: upErr } = await sb.storage.from('challenge-photos').upload(path, file);
+            if (!upErr) {
+              const { data: urlData } = sb.storage.from('challenge-photos').getPublicUrl(path);
+              photoUrl = urlData.publicUrl;
+            }
+          } catch {}
+        }
+
+        try {
+          await fetch('/api/submit-challenge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, challengeId: challenge.id, textResponse: text, photoUrl })
+          });
+          showToast('Challenge eingereicht! Mike wird es bestätigen. 🎉', 'success');
+          await loadChallenges(sb, userId);
+        } catch {
+          showToast('Fehler beim Einreichen. Bitte nochmal.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Einreichen 🚀';
+        }
+      });
+    }
   });
 }
 

@@ -134,6 +134,40 @@
   color: #fff;
 }
 
+/* ─── Challenge review ─── */
+.challenge-review-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.challenge-review-item:last-child { border-bottom: none; }
+.challenge-review-item__header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.challenge-review-item__emoji { font-size: 1.4rem; }
+.challenge-review-item__title { font-weight: 600; font-size: .95rem; flex: 1; }
+.challenge-review-item__meta { font-size: .75rem; color: var(--muted); margin-bottom: 8px; }
+.challenge-review-item__text {
+  background: var(--bg2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: .875rem;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.challenge-review-item__photo {
+  width: 100%; max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.challenge-review-item__actions { display: flex; gap: 8px; }
+.challenge-review-item__approved {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--green); font-size: .875rem; font-weight: 600;
+}
+
 /* ─── Empty state ─── */
 .empty-state {
   text-align: center;

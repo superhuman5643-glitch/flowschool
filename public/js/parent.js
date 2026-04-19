@@ -49,7 +49,8 @@ async function loadDashboard() {
     loadActivities(sb, lennyId, since),
     loadQuestions(sb, lennyId, since),
     loadSubjectProgress(sb, lennyId),
-    loadStreak(sb, lennyId)
+    loadStreak(sb, lennyId),
+    loadChallengeReviews(sb, lennyId)
   ]);
 }
 
@@ -217,6 +218,70 @@ async function loadStreak(sb, lennyId) {
   }
 
   document.getElementById('streak-count').textContent = streak;
+}
+
+/* ─── Challenge reviews ─── */
+async function loadChallengeReviews(sb, lennyId) {
+  const { data: submissions } = await sb
+    .from('challenge_submissions')
+    .select('*, challenges(title, description, bonus_xp, subjects(name, emoji))')
+    .eq('user_id', lennyId)
+    .order('submitted_at', { ascending: false });
+
+  const container = document.getElementById('challenges-review-list');
+  const badge     = document.getElementById('challenges-badge');
+  if (!submissions || submissions.length === 0) return;
+
+  const pendingCount = submissions.filter(s => s.status === 'pending').length;
+  if (pendingCount > 0) badge?.classList.remove('hidden');
+
+  container.innerHTML = '';
+  submissions.forEach(sub => {
+    const ch      = sub.challenges || {};
+    const subject = ch.subjects || {};
+    const item    = document.createElement('div');
+    item.className = 'challenge-review-item';
+
+    const actionsHtml = sub.status === 'approved'
+      ? `<div class="challenge-review-item__approved">✅ Bestätigt · +${sub.xp_awarded || 50} XP</div>`
+      : `<div class="challenge-review-item__actions">
+           <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px" data-id="${sub.id}">✅ Bestätigen (+50 XP)</button>
+         </div>`;
+
+    item.innerHTML = `
+      <div class="challenge-review-item__header">
+        <span class="challenge-review-item__emoji">${subject.emoji || '🎯'}</span>
+        <span class="challenge-review-item__title">${ch.title || 'Challenge'}</span>
+      </div>
+      <div class="challenge-review-item__meta">${subject.name || ''} · ${formatRelative(new Date(sub.submitted_at))}</div>
+      ${sub.text_response ? `<div class="challenge-review-item__text">${sub.text_response}</div>` : ''}
+      ${sub.photo_url ? `<img class="challenge-review-item__photo" src="${sub.photo_url}" alt="Foto" />` : ''}
+      ${actionsHtml}
+    `;
+
+    if (sub.status !== 'approved') {
+      item.querySelector('[data-id]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.textContent = 'Wird bestätigt…';
+        try {
+          await fetch('/api/approve-challenge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ submissionId: sub.id })
+          });
+          showToast('Challenge bestätigt! Lenny bekommt +50 XP 🎉', 'success');
+          await loadChallengeReviews(sb, lennyId);
+        } catch {
+          btn.disabled = false;
+          btn.textContent = '✅ Bestätigen (+50 XP)';
+          showToast('Fehler beim Bestätigen.', 'error');
+        }
+      });
+    }
+
+    container.appendChild(item);
+  });
 }
 
 /* ─── Helpers ─── */
