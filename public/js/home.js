@@ -14,21 +14,8 @@ function stickerFor(subjectName, level) {
 }
 
 /* ─── Ensure 4th core subject exists ─── */
-async function ensureBusinessSubject(sb) {
-  const { data } = await sb.from('subjects').select('id')
-    .eq('name', 'Bau dein eigenes Business').maybeSingle();
-  if (data) return;
-  await sb.from('subjects').insert({
-    name: 'Bau dein eigenes Business',
-    emoji: '🏪',
-    description: 'Von der Idee zum ersten Verdienst — baue Schritt für Schritt dein eigenes kleines Business auf.',
-    color_from: '#ffcc6a',
-    color_to: '#6affcc',
-    is_mandatory: true,
-    is_default: true,
-    sort_order: 4,
-    unlock_xp: 0
-  });
+async function ensureBusinessSubject() {
+  try { await fetch('/api/seed-subjects', { method: 'POST' }); } catch {}
 }
 
 async function initHome() {

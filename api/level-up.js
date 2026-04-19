@@ -5,9 +5,10 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const STICKER_MAP = {
-  'Emotionale Intelligenz':    ['💛','🧡','❤️','💜','🌈'],
-  'Finanzielle Intelligenz':   ['💰','💎','👑','🏆','🌟'],
-  'KI verstehen & beherrschen':['🤖','🧠','⚡','🚀','✨'],
+  'Emotionale Intelligenz':       ['💛','🧡','❤️','💜','🌈'],
+  'Finanzielle Intelligenz':      ['💰','💎','👑','🏆','🌟'],
+  'KI verstehen & beherrschen':   ['🤖','🧠','⚡','🚀','✨'],
+  'Bau dein eigenes Business':    ['🌱','🛒','💡','📈','🏆'],
 };
 const DEFAULT_STICKERS = ['⭐','🌟','💫','🎯','🏅'];
 
