@@ -26,8 +26,12 @@ async function initHome() {
   const displayName = (user.email || '').split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
   const name = displayName.charAt(0).toUpperCase() + displayName.slice(1);
   document.getElementById('header-greeting').textContent = `Hey, ${name}! 👋`;
-  document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
-  document.getElementById('header-avatar').addEventListener('click', logout);
+
+  const avatarEl = document.getElementById('header-avatar');
+  avatarEl.textContent = name.charAt(0).toUpperCase();
+  avatarEl.addEventListener('click', () => document.getElementById('avatar-input').click());
+  setupAvatarUpload(sb, user.id, avatarEl);
+  loadAvatar(sb, user.id, avatarEl);
 
   // Check onboarding
   const { data: profile } = await sb.from('child_profiles').select('interests').eq('user_id', user.id).maybeSingle();
@@ -737,6 +741,59 @@ document.getElementById('back-to-home').addEventListener('click', () => {
   document.getElementById('view-lessons').classList.remove('active');
   document.getElementById('view-home').classList.add('active');
 });
+
+/* ─── Avatar ─── */
+async function loadAvatar(sb, userId, avatarEl) {
+  try {
+    const { data } = await sb.from('child_profiles').select('avatar_url').eq('user_id', userId).maybeSingle();
+    if (data?.avatar_url) setAvatarImage(avatarEl, data.avatar_url);
+  } catch {}
+}
+
+function setAvatarImage(avatarEl, url) {
+  avatarEl.textContent = '';
+  avatarEl.style.backgroundImage = `url('${url}')`;
+  avatarEl.style.backgroundSize  = 'cover';
+  avatarEl.style.backgroundPosition = 'center';
+}
+
+function setupAvatarUpload(sb, userId, avatarEl) {
+  const input = document.getElementById('avatar-input');
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Preview immediately
+    const reader = new FileReader();
+    reader.onload = e => setAvatarImage(avatarEl, e.target.result);
+    reader.readAsDataURL(file);
+
+    // Upload
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload  = e => resolve(e.target.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      const res  = await fetch('/api/upload-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, fileType: file.type, fileBase64: base64 })
+      });
+      const data = await res.json();
+      if (data.url) {
+        setAvatarImage(avatarEl, data.url);
+        showToast('Profilbild gespeichert! 📸', 'success');
+      } else {
+        showToast('Fehler beim Hochladen.', 'error');
+      }
+    } catch {
+      showToast('Fehler beim Hochladen.', 'error');
+    }
+    input.value = '';
+  });
+}
 
 /* ─── Onboarding ─── */
 function showOnboarding(sb, userId) {
