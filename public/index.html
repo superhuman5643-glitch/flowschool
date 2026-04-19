@@ -91,16 +91,21 @@
       <h2>Willkommen zurück!</h2>
       <p>Meld dich an und mach weiter wo du aufgehört hast.</p>
 
-      <div class="role-selector">
-        <div class="role-btn selected" data-role="lenny">
+      <div class="role-selector" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="role-btn selected" data-role="lenny" data-email="lenny@flowschool.app">
           <span class="role-btn__emoji">🧑‍🚀</span>
           <div class="role-btn__name">Lenny</div>
           <div class="role-btn__sub">Ich lerne</div>
         </div>
-        <div class="role-btn" data-role="parent">
+        <div class="role-btn" data-role="parent" data-email="mike@flowschool.app">
           <span class="role-btn__emoji">👨‍💼</span>
           <div class="role-btn__name">Mike</div>
           <div class="role-btn__sub">Eltern-Ansicht</div>
+        </div>
+        <div class="role-btn" data-role="lenny" data-email="testuser@flowschool.app" data-pw="Test123!">
+          <span class="role-btn__emoji">🧪</span>
+          <div class="role-btn__name">Testuser</div>
+          <div class="role-btn__sub">Test-Konto</div>
         </div>
       </div>
 

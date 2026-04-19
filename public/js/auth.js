@@ -36,6 +36,8 @@ async function initLogin() {
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
       selectedRole = btn.dataset.role;
+      if (btn.dataset.email) document.getElementById('email').value = btn.dataset.email;
+      if (btn.dataset.pw)    document.getElementById('password').value = btn.dataset.pw;
     });
   });
 
