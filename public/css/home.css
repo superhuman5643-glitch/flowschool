@@ -591,3 +591,62 @@ details[open] .xp-info-accordion__toggle::after { transform: rotate(180deg); }
   .stats-bar { padding: 16px; }
   .section { padding: 0 16px 24px; }
 }
+
+/* ─── Onboarding overlay ─── */
+.onboarding-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(10,10,15,.97);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn .3s ease;
+}
+.onboarding-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  width: 100%; max-width: 520px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.6);
+}
+.onboarding-step { display: none; animation: fadeUp .3s ease; }
+.onboarding-step.active { display: block; }
+.onboarding-emoji { font-size: 3.5rem; margin-bottom: 16px; }
+.onboarding-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; }
+.onboarding-sub { font-size: .95rem; color: var(--muted); line-height: 1.5; }
+.onboarding-label { font-size: .85rem; font-weight: 600; margin-bottom: 6px; display: block; }
+.onboarding-field { display: flex; flex-direction: column; }
+
+.onboarding-progress {
+  height: 4px; background: var(--border); border-radius: 99px;
+  margin-bottom: 28px; overflow: hidden;
+}
+.onboarding-progress__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--purple), var(--pink));
+  border-radius: 99px;
+  transition: width .4s ease;
+}
+
+.onboarding-tags {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-top: 16px;
+}
+.tag-btn {
+  background: var(--bg2); border: 2px solid var(--border);
+  border-radius: 99px; padding: 8px 16px;
+  font-family: 'DM Sans', sans-serif; font-size: .9rem;
+  color: var(--text); cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.tag-btn:hover { border-color: var(--purple); transform: scale(1.04); }
+.tag-btn.selected {
+  border-color: var(--purple);
+  background: rgba(124,106,255,.15);
+  color: var(--purple); font-weight: 600;
+}
+
+.onboarding-summary {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 16px;
+  margin-top: 20px; font-size: .9rem; line-height: 1.7;
+}

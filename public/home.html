@@ -154,6 +154,99 @@
   <!-- Toast container -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Onboarding overlay -->
+  <div class="onboarding-overlay hidden" id="onboarding-overlay">
+    <div class="onboarding-card" id="onboarding-card">
+
+      <!-- Step 1: Willkommen -->
+      <div class="onboarding-step active" data-step="1">
+        <div class="onboarding-emoji">👋</div>
+        <h2 class="onboarding-title">Hey Lenny!</h2>
+        <p class="onboarding-sub">Bevor wir loslegen — ich möchte dich ein bisschen kennenlernen, damit ich dir die besten Lektionen bauen kann!</p>
+        <p class="onboarding-sub" style="margin-top:8px">Das dauert nur 2 Minuten 🚀</p>
+        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Los geht's! →</button>
+      </div>
+
+      <!-- Step 2: Interessen -->
+      <div class="onboarding-step" data-step="2">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:20%"></div></div>
+        <div class="onboarding-emoji">🎯</div>
+        <h2 class="onboarding-title">Was interessiert dich?</h2>
+        <p class="onboarding-sub">Wähle alles aus, was dir gefällt:</p>
+        <div class="onboarding-tags" id="tags-interests">
+          <button class="tag-btn" data-val="Fußball">⚽ Fußball</button>
+          <button class="tag-btn" data-val="Gaming">🎮 Gaming</button>
+          <button class="tag-btn" data-val="Musik">🎵 Musik</button>
+          <button class="tag-btn" data-val="Natur">🌿 Natur</button>
+          <button class="tag-btn" data-val="Kochen">🍕 Kochen</button>
+          <button class="tag-btn" data-val="Tiere">🐾 Tiere</button>
+          <button class="tag-btn" data-val="Technologie">💻 Technologie</button>
+          <button class="tag-btn" data-val="Autos">🚗 Autos</button>
+          <button class="tag-btn" data-val="Zeichnen">🎨 Zeichnen</button>
+          <button class="tag-btn" data-val="Filme & Serien">🎬 Filme & Serien</button>
+          <button class="tag-btn" data-val="Sport">🏋️ Sport</button>
+          <button class="tag-btn" data-val="Lego & Bauen">🧱 Lego & Bauen</button>
+        </div>
+        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
+      </div>
+
+      <!-- Step 3: Schule -->
+      <div class="onboarding-step" data-step="3">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:40%"></div></div>
+        <div class="onboarding-emoji">🏫</div>
+        <h2 class="onboarding-title">Und in der Schule?</h2>
+        <div class="onboarding-field">
+          <label class="onboarding-label">Was fällt dir leicht? 💪</label>
+          <input class="input" id="ob-strong" placeholder="z.B. Mathe, Sport, Deutsch…" />
+        </div>
+        <div class="onboarding-field" style="margin-top:16px">
+          <label class="onboarding-label">Was fällt dir schwer? 😬</label>
+          <input class="input" id="ob-weak" placeholder="z.B. Rechtschreibung, Geschichte…" />
+        </div>
+        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
+      </div>
+
+      <!-- Step 4: Lernstil -->
+      <div class="onboarding-step" data-step="4">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:60%"></div></div>
+        <div class="onboarding-emoji">📚</div>
+        <h2 class="onboarding-title">Wie lernst du am liebsten?</h2>
+        <div class="onboarding-tags" id="tags-style">
+          <button class="tag-btn tag-btn--single" data-val="Lesen & Texte">📖 Lesen & Texte</button>
+          <button class="tag-btn tag-btn--single" data-val="Videos schauen">🎬 Videos schauen</button>
+          <button class="tag-btn tag-btn--single" data-val="Ausprobieren">🔧 Ausprobieren</button>
+          <button class="tag-btn tag-btn--single" data-val="Mit Beispielen aus dem Alltag">🌍 Mit Beispielen</button>
+        </div>
+        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
+      </div>
+
+      <!-- Step 5: Business-Traum -->
+      <div class="onboarding-step" data-step="5">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:80%"></div></div>
+        <div class="onboarding-emoji">🏪</div>
+        <h2 class="onboarding-title">Dein Business-Traum</h2>
+        <p class="onboarding-sub">Hast du schon eine Idee, womit du Geld verdienen könntest? (Kein Muss!)</p>
+        <input class="input" id="ob-business" placeholder="z.B. Lemonade-Stand, YouTube-Kanal, Rasenmähen…" style="margin-top:16px" />
+        <div class="onboarding-field" style="margin-top:20px">
+          <label class="onboarding-label">Was willst du mit FlowSchool erreichen? 🚀</label>
+          <input class="input" id="ob-goal" placeholder="z.B. Geld sparen lernen, eigenes Business aufbauen…" />
+        </div>
+        <button class="btn btn-primary" id="ob-finish" style="margin-top:24px">Fertig! Los geht's 🚀</button>
+      </div>
+
+      <!-- Step 6: Fertig -->
+      <div class="onboarding-step" data-step="6">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:100%"></div></div>
+        <div class="onboarding-emoji">🎉</div>
+        <h2 class="onboarding-title">Perfekt, <span id="ob-name">Lenny</span>!</h2>
+        <p class="onboarding-sub">Ich habe mir alles gemerkt. Deine Lektionen werden jetzt auf dich zugeschnitten!</p>
+        <div class="onboarding-summary" id="ob-summary"></div>
+        <button class="btn btn-primary" id="ob-done" style="margin-top:24px">FlowSchool starten! 🚀</button>
+      </div>
+
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/home.js"></script>

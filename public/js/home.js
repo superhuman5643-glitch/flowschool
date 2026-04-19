@@ -29,6 +29,15 @@ async function initHome() {
   document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('header-avatar').addEventListener('click', logout);
 
+  // Check onboarding
+  const { data: profile } = await sb.from('child_profiles').select('interests').eq('user_id', user.id).maybeSingle();
+  if (!profile || !profile.interests || profile.interests.length === 0) {
+    document.getElementById('ob-name').textContent = name;
+    showOnboarding(sb, user.id);
+    hideLoader();
+    return;
+  }
+
   await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id), loadChallenges(sb, user.id), loadXpRoadmap(sb, user.id)]);
   hideLoader();
 }
@@ -728,3 +737,93 @@ document.getElementById('back-to-home').addEventListener('click', () => {
   document.getElementById('view-lessons').classList.remove('active');
   document.getElementById('view-home').classList.add('active');
 });
+
+/* ─── Onboarding ─── */
+function showOnboarding(sb, userId) {
+  const overlay = document.getElementById('onboarding-overlay');
+  overlay.classList.remove('hidden');
+
+  let currentStep = 1;
+  const answers = { interests: [], learningStyle: '', strong: '', weak: '', business: '', goal: '' };
+
+  // Tag buttons (multi-select)
+  document.querySelectorAll('#tags-interests .tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('selected');
+      const val = btn.dataset.val;
+      if (btn.classList.contains('selected')) answers.interests.push(val);
+      else answers.interests = answers.interests.filter(v => v !== val);
+    });
+  });
+
+  // Tag buttons (single-select)
+  document.querySelectorAll('#tags-style .tag-btn--single').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tags-style .tag-btn--single').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      answers.learningStyle = btn.dataset.val;
+    });
+  });
+
+  // Next buttons
+  document.querySelectorAll('.onboarding-next').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(currentStep + 1));
+  });
+
+  // Finish button
+  document.getElementById('ob-finish').addEventListener('click', async () => {
+    answers.strong   = document.getElementById('ob-strong').value.trim();
+    answers.weak     = document.getElementById('ob-weak').value.trim();
+    answers.business = document.getElementById('ob-business').value.trim();
+    answers.goal     = document.getElementById('ob-goal').value.trim();
+
+    // Show summary
+    const parts = [];
+    if (answers.interests.length) parts.push(`🎯 Interessen: ${answers.interests.join(', ')}`);
+    if (answers.strong)           parts.push(`💪 Stärken: ${answers.strong}`);
+    if (answers.weak)             parts.push(`📈 Wir arbeiten dran: ${answers.weak}`);
+    if (answers.learningStyle)    parts.push(`📚 Lernstil: ${answers.learningStyle}`);
+    if (answers.business)         parts.push(`🏪 Business-Traum: ${answers.business}`);
+    if (answers.goal)             parts.push(`🚀 Ziel: ${answers.goal}`);
+    document.getElementById('ob-summary').innerHTML = parts.join('<br>');
+
+    // Save to DB
+    try {
+      await fetch('/api/save-onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          interests:     answers.interests,
+          strongTopics:  answers.strong,
+          weakTopics:    answers.weak,
+          learningStyle: answers.learningStyle,
+          businessDream: answers.business,
+          goal:          answers.goal
+        })
+      });
+    } catch {}
+
+    goToStep(6);
+  });
+
+  // Done button
+  document.getElementById('ob-done').addEventListener('click', async () => {
+    overlay.classList.add('hidden');
+    const ctx = await requireAuth('lenny');
+    if (!ctx) return;
+    await Promise.all([
+      loadStats(ctx.sb, ctx.user.id),
+      loadSubjects(ctx.sb, ctx.user.id),
+      loadBadges(ctx.sb, ctx.user.id),
+      loadChallenges(ctx.sb, ctx.user.id),
+      loadXpRoadmap(ctx.sb, ctx.user.id)
+    ]);
+  });
+
+  function goToStep(n) {
+    document.querySelector(`.onboarding-step[data-step="${currentStep}"]`).classList.remove('active');
+    currentStep = n;
+    document.querySelector(`.onboarding-step[data-step="${currentStep}"]`).classList.add('active');
+  }
+}
