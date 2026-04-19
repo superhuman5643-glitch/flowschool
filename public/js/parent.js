@@ -19,7 +19,8 @@ async function initParent() {
     });
   });
 
-  await loadDashboard();
+  await Promise.all([loadDashboard(), loadVideoSettings()]);
+  setupVideoSettingsSave();
   hideLoader();
 }
 
@@ -331,4 +332,50 @@ function formatRelative(date) {
 
 function showEmptyState() {
   document.querySelectorAll('.summary-card__value').forEach(el => el.textContent = '—');
+}
+
+/* ─── Video Settings ─── */
+async function loadVideoSettings() {
+  try {
+    const res  = await fetch('/api/video-settings');
+    const data = await res.json();
+    document.getElementById('vs-channels').value  = data.preferred_channels || '';
+    document.getElementById('vs-max-age').value   = data.max_age_years || '3';
+    document.getElementById('vs-duration').value  = data.video_duration || 'medium';
+    document.getElementById('vs-language').value  = data.language || 'de';
+  } catch {}
+}
+
+function setupVideoSettingsSave() {
+  document.getElementById('vs-save').addEventListener('click', async () => {
+    const btn    = document.getElementById('vs-save');
+    const status = document.getElementById('vs-status');
+    btn.disabled = true;
+    btn.textContent = 'Speichern…';
+    try {
+      const res = await fetch('/api/video-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preferred_channels: document.getElementById('vs-channels').value.trim(),
+          max_age_years:      document.getElementById('vs-max-age').value,
+          video_duration:     document.getElementById('vs-duration').value,
+          language:           document.getElementById('vs-language').value,
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        status.textContent = '✅ Gespeichert!';
+        showToast('Video-Einstellungen gespeichert!', 'success');
+      } else {
+        status.textContent = '❌ Fehler: ' + (data.error || 'Tabelle fehlt — SQL unten ausführen');
+        showToast('Fehler beim Speichern. Tabelle anlegen?', 'error');
+      }
+    } catch {
+      status.textContent = '❌ Verbindungsfehler';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Einstellungen speichern';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  });
 }

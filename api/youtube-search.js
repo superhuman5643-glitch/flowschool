@@ -1,3 +1,5 @@
+import { getVideoSettings } from './video-settings.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -8,15 +10,40 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(500).json({ error: 'YouTube API key not configured' });
 
   try {
-    const safeSearch = isBreak ? 'strict' : 'moderate';
+    const settings = isBreak ? null : await getVideoSettings();
+
+    // Build search query — append preferred channel names as keywords
+    let query = searchTerm;
+    if (settings?.preferred_channels) {
+      const channels = settings.preferred_channels.split(',').map(c => c.trim()).filter(Boolean);
+      if (channels.length > 0) query += ' ' + channels.slice(0, 3).join(' OR ');
+    }
+
+    // publishedAfter based on max age
+    let publishedAfter = undefined;
+    const maxAge = parseInt(settings?.max_age_years || '0', 10);
+    if (maxAge > 0) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - maxAge);
+      publishedAfter = d.toISOString();
+    }
+
+    // Duration filter
+    const durationMap = { short: 'short', medium: 'medium', long: 'long' };
+    const videoDuration = durationMap[settings?.video_duration] || undefined;
+
+    const lang = isBreak ? 'de' : (settings?.language || 'de');
+
     const params = new URLSearchParams({
-      part:            'snippet',
-      q:               searchTerm,
-      type:            'video',
-      maxResults:      '5',
-      safeSearch,
-      relevanceLanguage: 'de',
-      key:             apiKey
+      part:              'snippet',
+      q:                 query,
+      type:              'video',
+      maxResults:        isBreak ? '5' : '10',
+      safeSearch:        isBreak ? 'strict' : 'strict',
+      relevanceLanguage: lang,
+      key:               apiKey,
+      ...(publishedAfter && { publishedAfter }),
+      ...(videoDuration  && !isBreak && { videoDuration }),
     });
 
     const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
@@ -27,12 +54,22 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Pick first suitable video (prefer longer videos for lessons, shorter for breaks)
     const items = data.items || [];
     if (items.length === 0) return res.json({ videoId: null });
 
-    const videoId = items[0]?.id?.videoId || null;
-    res.json({ videoId });
+    // If preferred channels set, score results: preferred channel = +10 bonus
+    let best = items[0];
+    if (settings?.preferred_channels && !isBreak) {
+      const preferred = settings.preferred_channels.toLowerCase().split(',').map(c => c.trim());
+      let bestScore = -1;
+      for (const item of items) {
+        const channel = (item.snippet?.channelTitle || '').toLowerCase();
+        const score = preferred.some(p => channel.includes(p)) ? 10 : 0;
+        if (score > bestScore) { bestScore = score; best = item; }
+      }
+    }
+
+    res.json({ videoId: best?.id?.videoId || null });
 
   } catch (err) {
     console.error('youtube-search error:', err);

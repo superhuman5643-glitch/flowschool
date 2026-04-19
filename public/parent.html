@@ -153,6 +153,61 @@
 
     </div>
 
+    <!-- Video Settings -->
+    <div class="panel" style="margin-bottom:24px">
+      <div class="panel__header">
+        <div class="panel__title">🎬 Video-Einstellungen</div>
+      </div>
+      <div class="panel__body">
+        <p class="text-sm text-muted" style="margin-bottom:20px">
+          Lege fest welche YouTube-Kanäle bevorzugt werden, wie alt Videos sein dürfen und wie lang sie sein sollen.
+        </p>
+
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label class="settings-label">Bevorzugte Kanäle <span class="text-muted">(kommagetrennt)</span></label>
+            <input class="input" id="vs-channels" placeholder="z.B. Lehrerschmidt, SRF Kids, MrWissen2go" />
+            <div class="settings-hint">Diese Kanäle werden bei der Suche bevorzugt</div>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label">Maximales Video-Alter</label>
+            <select class="input" id="vs-max-age">
+              <option value="0">Kein Limit</option>
+              <option value="1">Max. 1 Jahr alt</option>
+              <option value="2">Max. 2 Jahre alt</option>
+              <option value="3" selected>Max. 3 Jahre alt</option>
+              <option value="5">Max. 5 Jahre alt</option>
+              <option value="10">Max. 10 Jahre alt</option>
+            </select>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label">Video-Länge</label>
+            <select class="input" id="vs-duration">
+              <option value="any">Beliebig</option>
+              <option value="short">Kurz (unter 4 Min)</option>
+              <option value="medium" selected>Mittel (4–20 Min)</option>
+              <option value="long">Lang (über 20 Min)</option>
+            </select>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label">Sprache</label>
+            <select class="input" id="vs-language">
+              <option value="de" selected>Deutsch</option>
+              <option value="en">Englisch</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-primary" id="vs-save">Einstellungen speichern</button>
+          <span class="text-sm text-muted" id="vs-status"></span>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /parent-layout -->
 
   <!-- Toast -->

@@ -73,7 +73,6 @@ async function initLesson() {
   setupScrollProgress();
   setupChat();
   setupBreakHandlers();
-  setupVideoExpand();
 
   // Load YouTube API
   loadYouTubeAPI();
@@ -263,16 +262,6 @@ function endBreak() {
   showToast('Super! Weiter geht\'s! 💪', 'success');
 }
 
-function setupVideoExpand() {
-  const btn     = document.getElementById('video-expand-btn');
-  const section = document.getElementById('video-section');
-  if (!btn || !section) return;
-  btn.addEventListener('click', () => {
-    const isExpanded = section.classList.toggle('video-section--expanded');
-    section.classList.toggle('video-section--compact', !isExpanded);
-    btn.textContent = isExpanded ? '✕ Verkleinern' : '⛶ Vergrößern';
-  });
-}
 
 function setupBreakHandlers() {
   document.getElementById('start-break-btn').addEventListener('click', startBreak);

@@ -115,25 +115,13 @@
 }
 .video-expand-btn:hover { border-color: var(--purple); color: var(--text); }
 
-/* Compact: fixed small height */
-.video-section--compact .video-wrapper {
-  padding-top: 0;
-  height: 200px;
-}
-/* Expanded: full 16:9 */
-.video-section--expanded .video-wrapper {
-  padding-top: 56.25%;
-  height: auto;
-}
-
 .video-wrapper {
   position: relative;
-  padding-top: 56.25%;
+  padding-top: 56.25%; /* 16:9 */
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--card);
   border: 1px solid var(--border);
-  transition: padding-top .3s ease, height .3s ease;
 }
 .video-wrapper iframe {
   position: absolute; inset: 0;
