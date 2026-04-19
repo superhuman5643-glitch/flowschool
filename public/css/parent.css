@@ -134,6 +134,21 @@
   color: #fff;
 }
 
+/* ─── Surprise banner ─── */
+.surprise-banner {
+  background: linear-gradient(135deg, rgba(255,204,106,.15), rgba(255,106,158,.15));
+  border: 2px solid rgba(255,204,106,.5);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  animation: fadeUp .4s ease;
+  display: flex; align-items: center; gap: 20px;
+}
+.surprise-banner__emoji { font-size: 3rem; flex-shrink: 0; }
+.surprise-banner__body { flex: 1; }
+.surprise-banner__title { font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; color: var(--yellow); }
+.surprise-banner__sub { font-size: .9rem; color: var(--muted); line-height: 1.5; }
+
 /* ─── Challenge review ─── */
 .challenge-review-item {
   padding: 16px 0;

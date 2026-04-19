@@ -23,19 +23,25 @@ async function initHome() {
   document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('header-avatar').addEventListener('click', logout);
 
-  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id), loadChallenges(sb, user.id)]);
+  await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id), loadBadges(sb, user.id), loadChallenges(sb, user.id), loadXpRoadmap(sb, user.id)]);
   hideLoader();
 }
 
 /* ─── Stats ─── */
 async function loadStats(sb, userId) {
-  const { data } = await sb.from('user_stats').select('*').eq('user_id', userId).single();
+  const [statsRes, bonusRes] = await Promise.all([
+    sb.from('user_stats').select('*').eq('user_id', userId).single(),
+    sb.from('xp_bonus_log').select('xp').eq('user_id', userId)
+  ]);
+  const data = statsRes.data;
   if (!data) return;
+  const bonusXp = (bonusRes.data || []).reduce((s, r) => s + (r.xp || 0), 0);
+  const totalXp = (data.xp_points || 0) + bonusXp;
   document.getElementById('stat-days').textContent    = data.days_active || 0;
   document.getElementById('stat-hours').textContent   = (data.hours_learned || 0) + 'h';
-  document.getElementById('stat-xp').textContent      = data.xp_points || 0;
+  document.getElementById('stat-xp').textContent      = totalXp;
   document.getElementById('stat-lessons').textContent = data.lessons_completed || 0;
-  return data;
+  return { ...data, xp_points: totalXp };
 }
 
 /* ─── Subjects ─── */
@@ -143,10 +149,14 @@ async function loadSubjects(sb, userId) {
     await handleLevelUp(sb, userId, subject, completedLevel);
   }
 
-  // XP milestone check
-  const { data: statsData } = await sb.from('user_stats').select('xp_points').eq('user_id', userId).single();
-  const xp = statsData?.xp_points || 0;
-  await checkXpMilestones(sb, userId, xp, subjects);
+  // XP milestone check (include bonus XP)
+  const [statsRes2, bonusRes2] = await Promise.all([
+    sb.from('user_stats').select('xp_points').eq('user_id', userId).single(),
+    sb.from('xp_bonus_log').select('xp').eq('user_id', userId)
+  ]);
+  const baseXp  = statsRes2.data?.xp_points || 0;
+  const bonusXp2 = (bonusRes2.data || []).reduce((s, r) => s + (r.xp || 0), 0);
+  await checkXpMilestones(sb, userId, baseXp + bonusXp2, subjects);
 }
 
 /* ─── Level up ─── */
@@ -181,55 +191,129 @@ function showStickerCelebration(emoji, subjectName, level) {
   document.body.appendChild(banner);
 }
 
+/* ─── XP Roadmap ─── */
+async function loadXpRoadmap(sb, userId) {
+  const [statsRes, bonusRes, usedRes] = await Promise.all([
+    sb.from('user_stats').select('xp_points').eq('user_id', userId).single(),
+    sb.from('xp_bonus_log').select('xp').eq('user_id', userId),
+    sb.from('xp_milestones').select('milestone_xp').eq('user_id', userId)
+  ]);
+
+  const baseXp  = statsRes.data?.xp_points || 0;
+  const bonus   = (bonusRes.data || []).reduce((s, r) => s + (r.xp || 0), 0);
+  const xp      = baseXp + bonus;
+  const usedSet = new Set((usedRes.data || []).map(m => m.milestone_xp));
+
+  const milestones = [
+    { xp: 0,     icon: '🚀', label: 'Start' },
+    { xp: 500,   icon: '📚', label: '500 XP\nNeues Thema' },
+    { xp: 2500,  icon: '✨', label: '2.500 XP\nEigenes Thema' },
+    { xp: 5000,  icon: '🎁', label: '5.000 XP\nÜberraschung!' },
+    { xp: 7500,  icon: '🌟', label: '7.500 XP\nNoch ein Thema' },
+    { xp: 10000, icon: '👑', label: '10.000 XP\nMega-Überraschung' },
+  ];
+
+  const roadmap = document.getElementById('xp-roadmap');
+  const counter = document.getElementById('xp-roadmap-current');
+  if (!roadmap) return;
+
+  counter.textContent = `${xp.toLocaleString('de')} XP`;
+
+  const nextMilestone = milestones.find(m => m.xp > xp);
+  roadmap.innerHTML = '';
+
+  milestones.forEach((m, i) => {
+    const isDone = xp >= m.xp;
+    const isNext = nextMilestone && m.xp === nextMilestone.xp;
+
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = `xp-roadmap-connector${isDone ? ' xp-roadmap-connector--done' : ''}`;
+      roadmap.appendChild(conn);
+    }
+
+    const item = document.createElement('div');
+    item.className = `xp-roadmap-item${isDone ? ' xp-roadmap-item--done' : ''}${isNext ? ' xp-roadmap-item--next' : ''}`;
+    item.innerHTML = `
+      <div class="xp-roadmap-item__node">${isDone && m.xp > 0 ? '✓' : m.icon}</div>
+      <div class="xp-roadmap-item__label">${m.label.replace('\n', '<br>')}</div>
+    `;
+    roadmap.appendChild(item);
+  });
+
+  // Progress bar to next milestone
+  if (nextMilestone) {
+    const prevMs  = milestones[milestones.indexOf(nextMilestone) - 1];
+    const range   = nextMilestone.xp - prevMs.xp;
+    const prog    = xp - prevMs.xp;
+    const pct     = Math.min(100, Math.round((prog / range) * 100));
+    const missing = nextMilestone.xp - xp;
+
+    const bar = document.createElement('div');
+    bar.className = 'xp-roadmap-progress';
+    bar.innerHTML = `
+      <div class="xp-roadmap-progress__bar">
+        <div class="progress-bar">
+          <div class="progress-bar__fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="xp-roadmap-progress__label">Noch ${missing.toLocaleString('de')} XP bis ${nextMilestone.icon}</div>
+    `;
+    roadmap.insertAdjacentElement('afterend', bar);
+  }
+}
+
 /* ─── XP Milestones ─── */
+const XP_MILESTONES = [
+  { xp: 500,   type: 'unlock_subject',  label: '500 XP',   title: 'Neues Thema frei!',        sub: 'Du hast 500 XP — wähle ein neues Thema:' },
+  { xp: 2500,  type: 'custom_subject',  label: '2.500 XP', title: 'Eigenes Thema!',            sub: 'Du hast 2.500 XP — erstelle dein eigenes Lernthema:' },
+  { xp: 5000,  type: 'surprise',        label: '5.000 XP', title: '🎁 Überraschung!',          sub: 'Du hast 5.000 XP erreicht! Die Eltern haben eine Überraschung für dich!' },
+  { xp: 7500,  type: 'custom_subject',  label: '7.500 XP', title: 'Noch ein eigenes Thema!',   sub: 'Du hast 7.500 XP — erstelle ein weiteres eigenes Lernthema:' },
+  { xp: 10000, type: 'surprise',        label: '10.000 XP',title: '👑 Mega-Überraschung!',     sub: 'Du hast 10.000 XP! Das ist unglaublich — die Eltern haben etwas Besonderes für dich!' },
+];
+
 async function checkXpMilestones(sb, userId, xp, currentSubjects) {
   const { data: used } = await sb.from('xp_milestones').select('milestone_xp').eq('user_id', userId);
   const usedSet = new Set((used || []).map(m => m.milestone_xp));
 
-  if (xp >= 500 && !usedSet.has(500)) {
-    showXpBonus500(sb, userId, currentSubjects);
-  } else if (xp >= 2000 && !usedSet.has(2000)) {
-    showXpBonus2000(sb, userId);
+  for (const milestone of XP_MILESTONES) {
+    if (xp >= milestone.xp && !usedSet.has(milestone.xp)) {
+      if (milestone.type === 'unlock_subject') {
+        await showMilestoneUnlockSubject(sb, userId, milestone, currentSubjects);
+      } else if (milestone.type === 'custom_subject') {
+        showMilestoneCustomSubject(sb, userId, milestone);
+      } else if (milestone.type === 'surprise') {
+        await showMilestoneSurprise(sb, userId, milestone);
+      }
+      break; // show one at a time
+    }
   }
 }
 
-async function showXpBonus500(sb, userId, currentSubjects) {
-  // Load unlockable subjects (unlock_xp = 500, not yet unlocked)
-  const { data: available } = await sb
-    .from('subjects')
-    .select('*')
-    .eq('unlock_xp', 500)
-    .eq('is_mandatory', false)
-    .order('sort_order');
-
+async function showMilestoneUnlockSubject(sb, userId, milestone, currentSubjects) {
+  const { data: available } = await sb.from('subjects').select('*').eq('unlock_xp', 500).eq('is_mandatory', false).order('sort_order');
   const currentIds = new Set(currentSubjects.map(s => s.id));
   const choices = (available || []).filter(s => !currentIds.has(s.id));
-  if (choices.length === 0) return;
-
+  if (choices.length === 0) {
+    try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: milestone.xp }); } catch {}
+    return;
+  }
   const banner = document.getElementById('xp-bonus-banner');
   if (!banner) return;
   banner.classList.remove('hidden');
   banner.innerHTML = `
     <div class="xp-bonus__header">
-      <span class="xp-bonus__badge">⚡ 500 XP</span>
-      <h3 class="xp-bonus__title">Bonus freigeschaltet!</h3>
-      <p class="xp-bonus__sub">Du hast 500 XP gesammelt — wähle ein neues Thema:</p>
+      <span class="xp-bonus__badge">⚡ ${milestone.label}</span>
+      <h3 class="xp-bonus__title">${milestone.title}</h3>
+      <p class="xp-bonus__sub">${milestone.sub}</p>
     </div>
     <div class="xp-bonus__choices">
-      ${choices.map(s => `
-        <button class="xp-choice-btn" data-id="${s.id}">
-          <span class="xp-choice-btn__emoji">${s.emoji}</span>
-          <span class="xp-choice-btn__name">${s.name}</span>
-        </button>
-      `).join('')}
-    </div>
-  `;
-
+      ${choices.map(s => `<button class="xp-choice-btn" data-id="${s.id}"><span class="xp-choice-btn__emoji">${s.emoji}</span><span class="xp-choice-btn__name">${s.name}</span></button>`).join('')}
+    </div>`;
   banner.querySelectorAll('.xp-choice-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const subjectId = btn.dataset.id;
-      try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: subjectId }); } catch {}
-      try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 500 }); } catch {}
+      try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: btn.dataset.id }); } catch {}
+      try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: milestone.xp }); } catch {}
       banner.classList.add('hidden');
       showToast('Neues Thema freigeschaltet! 🎉', 'success');
       const ctx = await requireAuth('lenny');
@@ -238,56 +322,57 @@ async function showXpBonus500(sb, userId, currentSubjects) {
   });
 }
 
-async function showXpBonus2000(sb, userId) {
+function showMilestoneCustomSubject(sb, userId, milestone) {
   const banner = document.getElementById('xp-bonus-banner');
   if (!banner) return;
   banner.classList.remove('hidden');
   banner.innerHTML = `
     <div class="xp-bonus__header">
-      <span class="xp-bonus__badge">⚡ 2000 XP</span>
-      <h3 class="xp-bonus__title">Eigenes Thema!</h3>
-      <p class="xp-bonus__sub">Du hast 2000 XP — erstelle dein eigenes Lernthema:</p>
+      <span class="xp-bonus__badge">⚡ ${milestone.label}</span>
+      <h3 class="xp-bonus__title">${milestone.title}</h3>
+      <p class="xp-bonus__sub">${milestone.sub}</p>
     </div>
     <div class="xp-bonus__form">
       <input class="input" id="custom-topic-name" placeholder="Thema-Name (z.B. Astronomie)" maxlength="40" />
       <input class="input" id="custom-topic-emoji" placeholder="Emoji" maxlength="4" style="width:80px" />
       <button class="btn btn-primary" id="custom-topic-save">Erstellen 🚀</button>
-    </div>
-  `;
-
+    </div>`;
   document.getElementById('custom-topic-save').addEventListener('click', async () => {
     const name  = document.getElementById('custom-topic-name').value.trim();
     const emoji = document.getElementById('custom-topic-emoji').value.trim() || '📚';
     if (!name) return;
-
     const colors = [['#7c6aff','#ff6a9e'],['#ff6a9e','#ffcc6a'],['#6affcc','#7c6aff'],['#ffcc6a','#6affcc']];
     const [from, to] = colors[Math.floor(Math.random() * colors.length)];
-
     const { data: newSub, error } = await sb.from('subjects').insert({
       name, emoji, color_from: from, color_to: to,
-      created_by: userId, is_default: false, is_mandatory: false,
-      unlock_xp: 0, sort_order: 99
+      created_by: userId, is_default: false, is_mandatory: false, unlock_xp: 0, sort_order: 99
     }).select().single();
-
     if (error) { showToast('Fehler: ' + error.message, 'error'); return; }
-
     try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: newSub.id }); } catch {}
-    try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 2000 }); } catch {}
-
-    // Generate initial 5 lessons for the new subject
+    try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: milestone.xp }); } catch {}
     try {
-      await fetch('/api/level-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, subjectId: newSub.id, subjectName: name, completedLevel: 0 })
-      });
+      await fetch('/api/level-up', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, subjectId: newSub.id, subjectName: name, completedLevel: 0 }) });
     } catch {}
-
     banner.classList.add('hidden');
     showToast('Eigenes Thema erstellt! 🎉', 'success');
     const ctx = await requireAuth('lenny');
     await loadSubjects(ctx.sb, ctx.user.id);
   });
+}
+
+async function showMilestoneSurprise(sb, userId, milestone) {
+  try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: milestone.xp }); } catch {}
+  const overlay = document.createElement('div');
+  overlay.className = 'sticker-celebration';
+  overlay.innerHTML = `
+    <div class="sticker-celebration__inner">
+      <div class="sticker-celebration__emoji" style="font-size:5rem">${milestone.xp >= 10000 ? '👑' : '🎁'}</div>
+      <div class="sticker-celebration__title">${milestone.title}</div>
+      <div class="sticker-celebration__sub" style="max-width:320px;margin:0 auto 24px">${milestone.sub}</div>
+      <button class="btn btn-primary" onclick="this.closest('.sticker-celebration').remove()">Ich freue mich! 🚀</button>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 /* ─── Lesson list ─── */

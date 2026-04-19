@@ -24,18 +24,40 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing fields' });
   }
 
+  const MAX_LEVELS = 5;
   const nextLevel = completedLevel + 1;
   const stickerEmoji = getStickerEmoji(subjectName, completedLevel);
+  const subjectComplete = completedLevel === MAX_LEVELS;
 
   // Award sticker (ignore conflict = already awarded)
-  await sb.from('level_stickers').upsert({
-    user_id: userId,
-    subject_id: subjectId,
-    level: completedLevel,
-    sticker_emoji: stickerEmoji
-  }, { onConflict: 'user_id,subject_id,level', ignoreDuplicates: true });
+  if (completedLevel > 0) {
+    await sb.from('level_stickers').upsert({
+      user_id: userId,
+      subject_id: subjectId,
+      level: completedLevel,
+      sticker_emoji: stickerEmoji
+    }, { onConflict: 'user_id,subject_id,level', ignoreDuplicates: true });
+  }
 
-  // Check if level-2 lessons already exist for this subject
+  // Award XP bonus for level completion
+  if (completedLevel > 0) {
+    const xpBonus = subjectComplete ? 1000 : 100;
+    try {
+      await sb.from('xp_bonus_log').insert({
+        user_id: userId,
+        source: subjectComplete ? 'subject_complete' : 'level_complete',
+        source_id: subjectId,
+        xp: xpBonus
+      });
+    } catch {}
+  }
+
+  // Subject complete — no more lessons to generate
+  if (subjectComplete) {
+    return res.json({ sticker: stickerEmoji, nextLevel, subjectComplete: true });
+  }
+
+  // Check if next-level lessons already exist for this subject
   const { data: existing } = await sb
     .from('lessons')
     .select('id')

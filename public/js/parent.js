@@ -50,7 +50,8 @@ async function loadDashboard() {
     loadQuestions(sb, lennyId, since),
     loadSubjectProgress(sb, lennyId),
     loadStreak(sb, lennyId),
-    loadChallengeReviews(sb, lennyId)
+    loadChallengeReviews(sb, lennyId),
+    loadSurpriseAlert(sb, lennyId)
   ]);
 }
 
@@ -218,6 +219,37 @@ async function loadStreak(sb, lennyId) {
   }
 
   document.getElementById('streak-count').textContent = streak;
+}
+
+/* ─── Surprise alert ─── */
+async function loadSurpriseAlert(sb, lennyId) {
+  const [statsRes, bonusRes, usedRes] = await Promise.all([
+    sb.from('user_stats').select('xp_points').eq('user_id', lennyId).single(),
+    sb.from('xp_bonus_log').select('xp').eq('user_id', lennyId),
+    sb.from('xp_milestones').select('milestone_xp').eq('user_id', lennyId)
+  ]);
+  const xp      = (statsRes.data?.xp_points || 0) + (bonusRes.data || []).reduce((s, r) => s + r.xp, 0);
+  const usedSet = new Set((usedRes.data || []).map(m => m.milestone_xp));
+  const banner  = document.getElementById('surprise-banner');
+  if (!banner) return;
+
+  if (xp >= 10000 && usedSet.has(10000)) {
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+      <div class="surprise-banner__emoji">👑</div>
+      <div class="surprise-banner__body">
+        <div class="surprise-banner__title">Lenny hat 10.000 XP erreicht!</div>
+        <div class="surprise-banner__sub">Das ist eine unglaubliche Leistung — Lenny erwartet eine Mega-Überraschung von euch! 🎉</div>
+      </div>`;
+  } else if (xp >= 5000 && usedSet.has(5000)) {
+    banner.classList.remove('hidden');
+    banner.innerHTML = `
+      <div class="surprise-banner__emoji">🎁</div>
+      <div class="surprise-banner__body">
+        <div class="surprise-banner__title">Lenny hat 5.000 XP erreicht!</div>
+        <div class="surprise-banner__sub">Lenny wartet auf eine Überraschung von euch — ihr habt es versprochen! 🥳</div>
+      </div>`;
+  }
 }
 
 /* ─── Challenge reviews ─── */
