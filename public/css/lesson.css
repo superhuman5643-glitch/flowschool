@@ -303,20 +303,23 @@
   font-variant-numeric: tabular-nums;
 }
 .break-video-wrap {
-  width: 100%; max-width: 640px;
+  width: 560px;
+  max-width: calc(100vw - 48px);
   border-radius: var(--radius);
   overflow: hidden;
   margin: 16px 0;
+  flex-shrink: 0;
 }
 #break-video-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  padding-top: 56.25%;
   background: #000;
   overflow: hidden;
   border-radius: var(--radius);
 }
-#break-video-container iframe {
+#break-video-container iframe,
+#break-video-container > div:last-child {
   position: absolute;
   inset: 0;
   width: 100%;
