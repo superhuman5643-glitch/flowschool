@@ -213,7 +213,8 @@ async function generateLesson() {
       body: JSON.stringify({
         subjectName: state.subjectName,
         lessonTitle: state.title,
-        userId: state.user?.id
+        userId: state.user?.id,
+        lessonId: state.lessonId
       })
     });
     const data = await res.json();

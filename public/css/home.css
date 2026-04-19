@@ -123,6 +123,78 @@
 .subject-card__badges { display: flex; gap: 6px; margin-bottom: 10px; }
 .subject-card__progress { }
 
+/* ─── Subject stickers ─── */
+.subject-card__stickers {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+/* ─── XP Bonus Banner ─── */
+.xp-bonus {
+  margin: 0 24px 20px;
+  background: linear-gradient(135deg, rgba(124,106,255,.12), rgba(255,204,106,.12));
+  border: 1px solid rgba(124,106,255,.35);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  animation: fadeUp .4s ease;
+}
+.xp-bonus__header { margin-bottom: 16px; }
+.xp-bonus__badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--purple), var(--yellow));
+  color: #000;
+  font-size: .75rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 99px;
+  margin-bottom: 8px;
+}
+.xp-bonus__title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.xp-bonus__sub { font-size: .85rem; color: var(--muted); }
+.xp-bonus__choices {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.xp-choice-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  cursor: pointer; color: var(--text);
+  font-size: .9rem;
+  transition: border-color var(--transition), background var(--transition);
+}
+.xp-choice-btn:hover { border-color: var(--purple); background: rgba(124,106,255,.08); }
+.xp-choice-btn__emoji { font-size: 1.3rem; }
+.xp-bonus__form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.xp-bonus__form .input { flex: 1; min-width: 160px; }
+
+/* ─── Sticker Celebration Overlay ─── */
+.sticker-celebration {
+  position: fixed; inset: 0;
+  background: rgba(10,10,15,.92);
+  z-index: 9500;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .3s ease;
+}
+.sticker-celebration__inner {
+  text-align: center;
+  animation: fadeUp .4s ease;
+}
+.sticker-celebration__emoji { font-size: 5rem; margin-bottom: 16px; }
+.sticker-celebration__title { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+.sticker-celebration__sub { font-size: 1rem; color: var(--muted); margin-bottom: 24px; }
+
+/* ─── Level header in lesson list ─── */
+.lesson-level-header {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--purple);
+  padding: 12px 4px 6px;
+  margin-top: 4px;
+}
+
 /* ─── Add subject card ─── */
 .add-subject-card {
   border-radius: var(--radius);

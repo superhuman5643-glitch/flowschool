@@ -7,10 +7,28 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { subjectName, lessonTitle, userId } = req.body;
+  const { subjectName, lessonTitle, userId, lessonId, level = 1 } = req.body;
   if (!subjectName || !lessonTitle) return res.status(400).json({ error: 'Missing fields' });
 
-  // Fetch learning profile if userId provided
+  // Return cached content if available
+  if (lessonId) {
+    const { data: cached } = await sb
+      .from('lessons')
+      .select('content, quiz_questions, video_search_term, generated_at')
+      .eq('id', lessonId)
+      .single()
+      .catch(() => ({ data: null }));
+
+    if (cached?.generated_at && cached?.content) {
+      return res.json({
+        content: cached.content,
+        quizQuestions: cached.quiz_questions || [],
+        videoSearchTerm: cached.video_search_term || ''
+      });
+    }
+  }
+
+  // Build profile context
   let profileCtx = '';
   if (userId) {
     const { data: profile } = await sb.from('child_profiles')
@@ -23,12 +41,15 @@ export default async function handler(req, res) {
       if (profile.strong_topics?.length)      parts.push(`Starke Themen: ${profile.strong_topics.join(', ')}`);
       if (profile.weak_topics?.length)        parts.push(`Schwache Themen (extra erklären): ${profile.weak_topics.join(', ')}`);
       if (profile.learning_notes)             parts.push(`Notizen: ${profile.learning_notes}`);
-      const level = profile.vocab_level === 3 ? 'fortgeschritten' : profile.vocab_level === 2 ? 'mittel' : 'einfach';
-      parts.push(`Vokabular-Level: ${level}`);
-
+      const vocab = profile.vocab_level === 3 ? 'fortgeschritten' : profile.vocab_level === 2 ? 'mittel' : 'einfach';
+      parts.push(`Vokabular-Level: ${vocab}`);
       if (parts.length) profileCtx = `\n\nLennys Lernprofil:\n${parts.join('\n')}`;
     }
   }
+
+  const levelNote = level > 1
+    ? `\nDies ist Level ${level} — der Schüler kennt die Grundlagen bereits. Gehe tiefer, nutze anspruchsvollere Konzepte und weniger Erklärungen für Basics.`
+    : '';
 
   try {
     const message = await client.messages.create({
@@ -42,7 +63,7 @@ Nutze diese speziellen Klassen für Highlights:
 - <div class="highlight">wichtige Erkenntnis</div>
 - <div class="example">💡 Beispiel: ...</div>
 - <div class="fun-fact">🤯 Wusstest du: ...</div>
-${profileCtx}
+${profileCtx}${levelNote}
 
 Wenn ein Lernprofil vorhanden ist: passe Beispiele, Analogien und Erklärungstiefe gezielt daran an.
 Antworte NUR mit validem JSON in exakt diesem Format:
@@ -61,7 +82,18 @@ Video-Suchbegriff: passender YouTube-Begriff auf Deutsch für ein erklärendes V
     });
 
     const raw  = message.content[0].text.trim();
-    const json = JSON.parse(raw.replace(/^```json\s*/,'').replace(/```\s*$/,''));
+    const json = JSON.parse(raw.replace(/^```json\s*/, '').replace(/```\s*$/, ''));
+
+    // Cache in DB
+    if (lessonId) {
+      await sb.from('lessons').update({
+        content: json.content,
+        quiz_questions: json.quizQuestions,
+        video_search_term: json.videoSearchTerm,
+        generated_at: new Date().toISOString()
+      }).eq('id', lessonId).catch(() => {});
+    }
+
     res.json(json);
 
   } catch (err) {
