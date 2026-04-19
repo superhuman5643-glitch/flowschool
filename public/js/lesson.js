@@ -376,28 +376,51 @@ async function loadVideo(searchTerm) {
     const { videoId } = await res.json();
     if (!videoId) return;
 
+    state.currentVideoId = videoId;
+
     const wrapper = document.getElementById('video-wrapper');
-    wrapper.innerHTML = `<div id="yt-player" style="position:absolute;inset:0"></div>`;
+    const thumb   = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-    const tryCreate = () => {
-      if (!window.YT || !window.YT.Player) { setTimeout(tryCreate, 300); return; }
-      state.youtubePlayer = new YT.Player('yt-player', {
-        videoId,
-        width: '100%', height: '100%',
-        playerVars: { rel: 0, modestbranding: 1 },
-        events: {
-          onStateChange: onYTStateChange
-        }
-      });
-    };
-    tryCreate();
+    wrapper.innerHTML = `
+      <div id="yt-thumb" style="
+        position:absolute;inset:0;
+        background:url('${thumb}') center/cover no-repeat;
+        cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+      ">
+        <div style="
+          width:64px;height:64px;border-radius:50%;
+          background:rgba(255,0,0,.9);
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 4px 20px rgba(0,0,0,.5);
+          transition:transform .15s;
+        " onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform=''">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>`;
 
-    // Poll video progress
-    state.ytCheckInterval = setInterval(updateVideoProgress, 1000);
+    document.getElementById('yt-thumb').addEventListener('click', () => activateYTPlayer(videoId), { once: true });
 
   } catch (err) {
     console.error('Video load error', err);
   }
+}
+
+function activateYTPlayer(videoId) {
+  const wrapper = document.getElementById('video-wrapper');
+  wrapper.innerHTML = `<div id="yt-player" style="position:absolute;inset:0"></div>`;
+
+  const tryCreate = () => {
+    if (!window.YT || !window.YT.Player) { setTimeout(tryCreate, 300); return; }
+    state.youtubePlayer = new YT.Player('yt-player', {
+      videoId,
+      width: '100%', height: '100%',
+      playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
+      events: { onStateChange: onYTStateChange }
+    });
+  };
+  tryCreate();
+  state.ytCheckInterval = setInterval(updateVideoProgress, 1000);
 }
 
 function onYTStateChange(event) {
