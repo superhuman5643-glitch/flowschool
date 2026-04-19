@@ -151,13 +151,23 @@ async function fetchBreakVideo() {
 
     const tryCreate = () => {
       if (!window.YT || !window.YT.Player) { setTimeout(tryCreate, 300); return; }
+      let breakMaxWatched = 0;
       state.breakPlayer = new YT.Player('break-yt-player', {
         videoId,
         width: '100%', height: '100%',
         playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
         events: {
           onStateChange: (e) => {
-            if (e.data === YT.PlayerState.ENDED) showCheckin();
+            if (e.data === YT.PlayerState.ENDED) { showCheckin(); return; }
+            // Prevent seeking in break video too
+            const bp = state.breakPlayer;
+            if (!bp || typeof bp.getCurrentTime !== 'function') return;
+            const cur = bp.getCurrentTime();
+            if (cur > breakMaxWatched + 1) {
+              bp.seekTo(breakMaxWatched, true);
+            } else {
+              breakMaxWatched = Math.max(breakMaxWatched, cur);
+            }
           }
         }
       });
@@ -388,6 +398,7 @@ async function loadVideo(searchTerm) {
 }
 
 function onYTStateChange(event) {
+  // Check for seek attempt immediately on any state change
   updateVideoProgress();
 }
 
@@ -398,10 +409,10 @@ function updateVideoProgress() {
   const current  = p.getCurrentTime();
   if (!duration) return;
 
-  // Vorspulen verhindern: wenn mehr als 3s vorgesprungen, zurücksetzen
-  if (current > state.maxWatchedTime + 3) {
+  // Vorspulen verhindern: kein Sprung mehr als 1s über maxWatchedTime
+  if (current > state.maxWatchedTime + 1) {
     p.seekTo(state.maxWatchedTime, true);
-    showToast('Bitte das Video nicht vorspulen! 😅', 'error');
+    showToast('⏪ Vorspulen ist nicht erlaubt!', 'error');
     return;
   }
   state.maxWatchedTime = Math.max(state.maxWatchedTime, current);
