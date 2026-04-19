@@ -441,9 +441,9 @@ async function loadChallenges(sb, userId) {
     let formHtml   = '';
 
     if (sub?.status === 'approved') {
-      statusHtml = `<div class="challenge-card__status challenge-card__status--approved">✅ Von Mike bestätigt! +${sub.xp_awarded || 50} XP verdient</div>`;
+      statusHtml = `<div class="challenge-card__status challenge-card__status--approved">✅ Von den Eltern bestätigt! +${sub.xp_awarded || 50} XP verdient</div>`;
     } else if (sub?.status === 'pending') {
-      statusHtml = `<div class="challenge-card__status challenge-card__status--pending">⏳ Eingereicht — wartet auf Mikes Bestätigung</div>`;
+      statusHtml = `<div class="challenge-card__status challenge-card__status--pending">⏳ Eingereicht — wartet auf Bestätigung der Eltern</div>`;
     } else {
       formHtml = `
         <div class="challenge-form" id="cform-${challenge.id}">
@@ -519,7 +519,7 @@ async function loadChallenges(sb, userId) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, challengeId: challenge.id, textResponse: text, photoUrl })
           });
-          showToast('Challenge eingereicht! Mike wird es bestätigen. 🎉', 'success');
+          showToast('Challenge eingereicht! Die Eltern werden es bestätigen. 🎉', 'success');
           await loadChallenges(sb, userId);
         } catch {
           showToast('Fehler beim Einreichen. Bitte nochmal.', 'error');
