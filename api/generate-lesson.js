@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
   try {
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 2048,
       system: `Du bist ein begeisterter Lehrerkollege für einen 12-jährigen Schüler namens Lenny.
 Dein Ton: locker, freundlich, wie ein cooler älterer Freund — keine trockene Schulsprache.

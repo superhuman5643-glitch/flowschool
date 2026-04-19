@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   // Generate 5 new lesson titles for the next level
   try {
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 512,
       system: 'Du erstellst Lektionstitel für einen 12-jährigen. Antworte NUR mit validem JSON: {"titles": ["Titel 1", "Titel 2", "Titel 3", "Titel 4", "Titel 5"]}',
       messages: [{

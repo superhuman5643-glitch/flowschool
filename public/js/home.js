@@ -268,6 +268,16 @@ async function showXpBonus2000(sb, userId) {
 
     try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: newSub.id }); } catch {}
     try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 2000 }); } catch {}
+
+    // Generate initial 5 lessons for the new subject
+    try {
+      await fetch('/api/level-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, subjectId: newSub.id, subjectName: name, completedLevel: 0 })
+      });
+    } catch {}
+
     banner.classList.add('hidden');
     showToast('Eigenes Thema erstellt! 🎉', 'success');
     const ctx = await requireAuth('lenny');
@@ -295,6 +305,41 @@ async function showLessons(sb, userId, subject) {
 
   const list = document.getElementById('lesson-list');
   list.innerHTML = '';
+
+  // Auto-generate lessons if none exist yet (e.g. newly created custom subject)
+  if (!lessons || lessons.length === 0) {
+    list.innerHTML = '<div class="lesson-level-header">Lektionen werden erstellt…</div>';
+    try {
+      await fetch('/api/level-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, subjectId: subject.id, subjectName: subject.name, completedLevel: 0 })
+      });
+    } catch {}
+    // Reload lessons after generation
+    const { data: freshLessons } = await sb.from('lessons').select('*').eq('subject_id', subject.id).order('sort_order');
+    if (freshLessons?.length) {
+      list.innerHTML = '';
+      freshLessons.forEach((lesson, i) => {
+        const item = document.createElement('div');
+        item.className = 'lesson-item';
+        item.style.animationDelay = `${i * 0.05}s`;
+        item.innerHTML = `
+          <div class="lesson-item__number">${i + 1}</div>
+          <div class="lesson-item__title">${lesson.title}</div>
+          <div class="lesson-item__meta">${lesson.duration_minutes} Min</div>
+        `;
+        item.addEventListener('click', () => {
+          const params = new URLSearchParams({ lessonId: lesson.id, subjectId: subject.id, subjectName: subject.name, title: lesson.title });
+          window.location.href = `/lesson?${params}`;
+        });
+        list.appendChild(item);
+      });
+    } else {
+      list.innerHTML = '<div class="lesson-level-header">Fehler beim Erstellen. Bitte nochmal versuchen.</div>';
+    }
+    return;
+  }
 
   // Group by level (5 per level)
   const grouped = {};
