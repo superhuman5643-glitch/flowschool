@@ -223,8 +223,8 @@ async function showXpBonus500(sb, userId, currentSubjects) {
   banner.querySelectorAll('.xp-choice-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const subjectId = btn.dataset.id;
-      await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: subjectId }).catch(() => {});
-      await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 500 }).catch(() => {});
+      try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: subjectId }); } catch {}
+      try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 500 }); } catch {}
       banner.classList.add('hidden');
       showToast('Neues Thema freigeschaltet! 🎉', 'success');
       const ctx = await requireAuth('lenny');
@@ -266,8 +266,8 @@ async function showXpBonus2000(sb, userId) {
 
     if (error) { showToast('Fehler: ' + error.message, 'error'); return; }
 
-    await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: newSub.id }).catch(() => {});
-    await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 2000 }).catch(() => {});
+    try { await sb.from('unlocked_subjects').insert({ user_id: userId, subject_id: newSub.id }); } catch {}
+    try { await sb.from('xp_milestones').insert({ user_id: userId, milestone_xp: 2000 }); } catch {}
     banner.classList.add('hidden');
     showToast('Eigenes Thema erstellt! 🎉', 'success');
     const ctx = await requireAuth('lenny');
