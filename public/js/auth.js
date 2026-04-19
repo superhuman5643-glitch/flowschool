@@ -119,9 +119,14 @@ async function requireAuth(requiredRole) {
 
 /* ─── Logout ─── */
 async function logout() {
-  const sb = await getSupabase();
-  await sb.auth.signOut();
-  window.location.href = '/';
+  try {
+    const sb = await getSupabase();
+    await sb.auth.signOut();
+  } catch {}
+  // Clear any cached session state
+  _supabase = null;
+  localStorage.clear();
+  window.location.replace('/');
 }
 
 /* ─── Page loader ─── */

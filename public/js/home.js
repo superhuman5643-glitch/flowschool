@@ -654,12 +654,23 @@ async function loadChallenges(sb, userId) {
         const file = photoInput?.files[0];
         if (file) {
           try {
-            const path = `${userId}/${challenge.id}/${Date.now()}_${file.name}`;
-            const { error: upErr } = await sb.storage.from('challenge-photos').upload(path, file);
-            if (!upErr) {
-              const { data: urlData } = sb.storage.from('challenge-photos').getPublicUrl(path);
-              photoUrl = urlData.publicUrl;
-            }
+            // Convert to base64 and upload via server-side API (needs service role for storage)
+            const base64 = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload  = e => resolve(e.target.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            const upRes  = await fetch('/api/upload-photo', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId, challengeId: challenge.id,
+                fileName: file.name, fileType: file.type, fileBase64: base64
+              })
+            });
+            const upData = await upRes.json();
+            if (upData.url) photoUrl = upData.url;
           } catch {}
         }
 

@@ -8,6 +8,7 @@ async function initParent() {
   if (!parentCtx) return;
 
   document.getElementById('header-avatar').addEventListener('click', logout);
+  document.getElementById('logout-btn').addEventListener('click', logout);
 
   // Date filter
   document.querySelectorAll('.date-btn').forEach(btn => {
