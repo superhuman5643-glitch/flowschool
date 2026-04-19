@@ -9,7 +9,7 @@ const DEFAULTS = {
   language: 'de',
 };
 
-export async function getVideoSettings() {
+async function getVideoSettings() {
   try {
     const { data } = await sb.from('app_settings').select('key, value');
     const map = {};

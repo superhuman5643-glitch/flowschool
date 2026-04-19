@@ -33,9 +33,10 @@ async function initHome() {
   setupAvatarUpload(sb, user.id, avatarEl);
   loadAvatar(sb, user.id, avatarEl);
 
-  // Check onboarding
+  // Check onboarding — show if never completed OR if v2 flag not yet set
+  const onboardingDone = localStorage.getItem('fs_onboarding_v2');
   const { data: profile } = await sb.from('child_profiles').select('interests').eq('user_id', user.id).maybeSingle();
-  if (!profile || !profile.interests || profile.interests.length === 0) {
+  if (!onboardingDone || !profile || !profile.interests || profile.interests.length === 0) {
     document.getElementById('ob-name').textContent = name;
     showOnboarding(sb, user.id);
     hideLoader();
@@ -866,6 +867,7 @@ function showOnboarding(sb, userId) {
 
   // Done button
   document.getElementById('ob-done').addEventListener('click', async () => {
+    localStorage.setItem('fs_onboarding_v2', '1');
     overlay.classList.add('hidden');
     const ctx = await requireAuth('lenny');
     if (!ctx) return;
