@@ -17,7 +17,10 @@ async function initHome() {
   if (!ctx) return;
   const { sb, user } = ctx;
 
-  document.getElementById('header-greeting').textContent = 'Hey, Lenny! 👋';
+  const displayName = (user.email || '').split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
+  const name = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+  document.getElementById('header-greeting').textContent = `Hey, ${name}! 👋`;
+  document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('header-avatar').addEventListener('click', logout);
 
   await Promise.all([loadStats(sb, user.id), loadSubjects(sb, user.id)]);
