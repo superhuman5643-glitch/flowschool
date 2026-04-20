@@ -20,9 +20,19 @@ export default async function handler(req, res) {
         .single();
 
       if (cached?.generated_at && cached?.content) {
+        // Extract embedded mcQuestions from last element if present
+        const allQ = cached.quiz_questions || [];
+        const last = allQ[allQ.length - 1];
+        let quizQuestions = allQ;
+        let mcQuestions = [];
+        if (typeof last === 'string' && last.startsWith('{"__mc__":')) {
+          try { mcQuestions = JSON.parse(last).__mc__ || []; } catch {}
+          quizQuestions = allQ.slice(0, -1);
+        }
         return res.json({
           content: cached.content,
-          quizQuestions: cached.quiz_questions || [],
+          quizQuestions,
+          mcQuestions,
           videoSearchTerm: cached.video_search_term || ''
         });
       }
@@ -92,12 +102,18 @@ Video-Suchbegriff: passender YouTube-Begriff auf Deutsch für ein erklärendes V
     const raw  = message.content[0].text.trim();
     const json = JSON.parse(raw.replace(/^```json\s*/, '').replace(/```\s*$/, ''));
 
+    // Embed mcQuestions as last element of quiz_questions for storage (no extra column needed)
+    const allQuestions = [
+      ...(json.quizQuestions || []),
+      JSON.stringify({ __mc__: json.mcQuestions || [] })
+    ];
+
     // Cache in DB
     if (lessonId) {
       try {
         await sb.from('lessons').update({
           content: json.content,
-          quiz_questions: json.quizQuestions,
+          quiz_questions: allQuestions,
           video_search_term: json.videoSearchTerm,
           generated_at: new Date().toISOString()
         }).eq('id', lessonId);
