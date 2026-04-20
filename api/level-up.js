@@ -58,6 +58,27 @@ export default async function handler(req, res) {
     return res.json({ sticker: stickerEmoji, nextLevel, subjectComplete: true });
   }
 
+  // Always ensure challenge exists for completed level
+  if (completedLevel > 0) {
+    const { data: existingChallenge } = await sb
+      .from('challenges').select('id')
+      .eq('subject_id', subjectId).eq('level', completedLevel).maybeSingle();
+
+    if (!existingChallenge) {
+      try {
+        const challengeMsg = await client.messages.create({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 256,
+          system: 'Du erstellst praktische Alltagsaufgaben für einen 12-jährigen. Antworte NUR mit validem JSON: {"title": "Kurzer Titel (max 8 Wörter)", "description": "Konkrete Aufgabe die zeigt dass das Gelernte angewendet wird (2-3 Sätze, alltagsnah und machbar)"}',
+          messages: [{ role: 'user', content: `Fach: "${subjectName}", Level ${completedLevel} abgeschlossen. Erstelle eine praktische Alltagsaufgabe. Auf Deutsch.` }]
+        });
+        const cRaw = challengeMsg.content[0].text.trim();
+        const { title: cTitle, description: cDesc } = JSON.parse(cRaw.replace(/^```json\s*/, '').replace(/```\s*$/, ''));
+        await sb.from('challenges').insert({ subject_id: subjectId, level: completedLevel, title: cTitle, description: cDesc, bonus_xp: 250 });
+      } catch (cErr) { console.error('challenge gen error:', cErr); }
+    }
+  }
+
   // Check if next-level lessons already exist for this subject
   const { data: existing } = await sb
     .from('lessons')
@@ -94,32 +115,6 @@ Erstelle 5 fortgeschrittenere Lektionstitel die auf Level ${completedLevel} aufb
     }));
 
     await sb.from('lessons').insert(lessons);
-
-    // Generate challenge for completed level (only for real level completions, not initial setup)
-    if (completedLevel > 0) {
-      try {
-        const challengeMsg = await client.messages.create({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 256,
-          system: 'Du erstellst praktische Alltagsaufgaben für einen 12-jährigen. Antworte NUR mit validem JSON: {"title": "Kurzer Titel (max 8 Wörter)", "description": "Konkrete Aufgabe die zeigt dass das Gelernte angewendet wird (2-3 Sätze, alltagsnah und machbar)"}',
-          messages: [{
-            role: 'user',
-            content: `Fach: "${subjectName}", Level ${completedLevel} abgeschlossen. Erstelle eine praktische Alltagsaufgabe. Auf Deutsch.`
-          }]
-        });
-        const cRaw = challengeMsg.content[0].text.trim();
-        const { title: cTitle, description: cDesc } = JSON.parse(cRaw.replace(/^```json\s*/, '').replace(/```\s*$/, ''));
-        await sb.from('challenges').upsert({
-          subject_id: subjectId,
-          level: completedLevel,
-          title: cTitle,
-          description: cDesc,
-          bonus_xp: 250
-        }, { onConflict: 'subject_id,level', ignoreDuplicates: true });
-      } catch (cErr) {
-        console.error('challenge generation error:', cErr);
-      }
-    }
 
     res.json({ sticker: stickerEmoji, nextLevel });
   } catch (err) {
