@@ -10,7 +10,16 @@ export default async function handler(req, res) {
   const { subjectName, lessonTitle, userId, lessonId, level = 1 } = req.body;
   if (!subjectName || !lessonTitle) return res.status(400).json({ error: 'Missing fields' });
 
-  // Return cached content if available
+  // Fetch child's name first (needed for cache check + personalization)
+  let childName = 'du';
+  if (userId) {
+    try {
+      const { data: { user } } = await sb.auth.admin.getUserById(userId);
+      childName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'du';
+    } catch {}
+  }
+
+  // Return cached content if available and personalized for this user
   if (lessonId) {
     try {
       const { data: cached } = await sb
@@ -19,11 +28,9 @@ export default async function handler(req, res) {
         .eq('id', lessonId)
         .single();
 
-      // Only use cache if it was personalized for this user (name check)
       const cachedForThisUser = !cached?.content || childName === 'du' ||
         cached.content.toLowerCase().includes(childName.toLowerCase());
       if (cached?.generated_at && cached?.content && cachedForThisUser) {
-        // Extract embedded mcQuestions from last element if present
         const allQ = cached.quiz_questions || [];
         const last = allQ[allQ.length - 1];
         let quizQuestions = allQ;
@@ -39,15 +46,6 @@ export default async function handler(req, res) {
           videoSearchTerm: cached.video_search_term || ''
         });
       }
-    } catch {}
-  }
-
-  // Fetch child's name dynamically
-  let childName = 'du';
-  if (userId) {
-    try {
-      const { data: { user } } = await sb.auth.admin.getUserById(userId);
-      childName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'du';
     } catch {}
   }
 
