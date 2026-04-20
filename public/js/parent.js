@@ -28,22 +28,14 @@ async function initParent() {
 async function loadDashboard() {
   const { sb } = parentCtx;
 
-  // Find Lenny's user ID — try role first, then email fallback
-  let lenny = null;
-  const { data: byRole } = await sb.from('users').select('id').eq('role', 'lenny').limit(1).maybeSingle();
-  if (byRole) {
-    lenny = byRole;
-  } else {
-    const { data: byEmail } = await sb.from('users').select('id').eq('email', 'lenny@flowschool.app').maybeSingle();
-    lenny = byEmail;
-  }
+  // Get Lenny's user ID from config (server-side, bypasses RLS)
+  const cfg = await getConfig();
+  const lennyId = cfg.lennyId;
 
-  if (!lenny) {
+  if (!lennyId) {
     showEmptyState();
     return;
   }
-
-  const lennyId  = lenny.id;
   const since    = activeDays > 0
     ? new Date(Date.now() - activeDays * 86400000).toISOString()
     : new Date(0).toISOString();
