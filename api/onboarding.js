@@ -72,21 +72,29 @@ export default async function handler(req, res) {
     const { parentId } = req.body;
     if (!parentId) return res.status(400).json({ error: 'Missing parentId' });
 
-    const { data: links } = await sb
+    const { data: links, error: linksError } = await sb
       .from('parent_child_links')
       .select('child_id, nickname')
       .eq('parent_id', parentId);
 
+    if (linksError) return res.status(500).json({ error: linksError.message });
     if (!links || links.length === 0) return res.json({ children: [] });
 
-    const childIds = links.map(l => l.child_id);
-    const { data: users } = await sb.from('users').select('id, email').in('id', childIds);
+    // Fetch names from auth metadata (most reliable — display_name set at registration)
+    const { data: authList } = await sb.auth.admin.listUsers({ perPage: 1000 });
+    const authUsers = authList?.users || [];
 
     const children = links.map(link => {
-      const user      = (users || []).find(u => u.id === link.child_id);
-      const emailName = (user?.email || 'kind').split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
-      const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-      return { id: link.child_id, email: user?.email || '', displayName: link.nickname || displayName };
+      const authUser = authUsers.find(u => u.id === link.child_id);
+      const rawName  = authUser?.user_metadata?.display_name
+        || authUser?.email?.split('@')[0]
+        || 'Kind';
+      const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      return {
+        id:          link.child_id,
+        email:       authUser?.email || '',
+        displayName: link.nickname || displayName
+      };
     });
 
     return res.json({ children });
@@ -108,15 +116,23 @@ export default async function handler(req, res) {
     const { data: childRow } = await sb.from('users').select('role').eq('id', childAuth.id).maybeSingle();
     if (childRow?.role === 'parent') return res.status(400).json({ error: 'Das ist ein Eltern-Konto, kein Kind-Konto.' });
 
-    try {
-      await sb.from('parent_child_links').insert({ parent_id: parentId, child_id: childAuth.id, nickname: nickname || null });
-      // Ensure child is in users table (fallback for manually created accounts)
-      await sb.from('users').upsert({ id: childAuth.id, email: childAuth.email, role: 'lenny' }, { onConflict: 'id' });
-      return res.json({ ok: true });
-    } catch (err) {
-      if (err.code === '23505') return res.status(409).json({ error: 'Kind ist bereits verlinkt.' });
-      return res.status(500).json({ error: err.message });
+    // Ensure child is in users table FIRST (foreign key may be needed)
+    await sb.from('users').upsert(
+      { id: childAuth.id, email: childAuth.email, role: 'lenny' },
+      { onConflict: 'id' }
+    );
+
+    // Insert link — check error explicitly (SDK v2 does NOT throw on DB errors)
+    const { error: insertError } = await sb
+      .from('parent_child_links')
+      .insert({ parent_id: parentId, child_id: childAuth.id, nickname: nickname || null });
+
+    if (insertError) {
+      if (insertError.code === '23505') return res.status(409).json({ error: 'Kind ist bereits verlinkt.' });
+      return res.status(500).json({ error: insertError.message });
     }
+
+    return res.json({ ok: true });
   }
 
   // POST /api/onboarding { action: 'register', userId, email, role }
