@@ -98,13 +98,13 @@ async function initLogin() {
     }
 
     setLoading('register', false);
-    if (data.session) {
-      // Email confirmation disabled — log in directly
-      await redirectByRole(sb);
-    } else {
-      showSuccess('✅ Konto erstellt! Bitte E-Mail bestätigen und dann anmelden.');
-      document.getElementById('register-form').reset();
-    }
+    // Always show success and let user log in manually (don't auto-login)
+    showSuccess('✅ Konto erstellt! Jetzt anmelden.');
+    document.getElementById('register-form').reset();
+    // Switch to login tab after short delay
+    setTimeout(() => {
+      document.getElementById('tab-login').click();
+    }, 1500);
   });
 }
 
