@@ -28,13 +28,15 @@ async function initParent() {
 async function loadDashboard() {
   const { sb } = parentCtx;
 
-  // Find Lenny's user ID
-  const { data: lenny } = await sb
-    .from('users')
-    .select('id')
-    .eq('role', 'lenny')
-    .limit(1)
-    .single();
+  // Find Lenny's user ID — try role first, then email fallback
+  let lenny = null;
+  const { data: byRole } = await sb.from('users').select('id').eq('role', 'lenny').limit(1).maybeSingle();
+  if (byRole) {
+    lenny = byRole;
+  } else {
+    const { data: byEmail } = await sb.from('users').select('id').eq('email', 'lenny@flowschool.app').maybeSingle();
+    lenny = byEmail;
+  }
 
   if (!lenny) {
     showEmptyState();
