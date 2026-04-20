@@ -438,14 +438,21 @@ async function showLessons(sb, userId, subject) {
   document.getElementById('subject-name').textContent  = subject.name;
   document.getElementById('subject-desc').textContent  = subject.description || '';
 
-  const { data: lessons } = await sb
-    .from('lessons').select('*').eq('subject_id', subject.id).order('sort_order');
-
-  const { data: progress } = await sb
-    .from('progress').select('lesson_id, completed, score').eq('user_id', userId);
+  const [{ data: lessons }, { data: progress }, { data: challenges }, { data: submissions }] = await Promise.all([
+    sb.from('lessons').select('*').eq('subject_id', subject.id).order('sort_order'),
+    sb.from('progress').select('lesson_id, completed, score').eq('user_id', userId),
+    sb.from('challenges').select('*').eq('subject_id', subject.id),
+    sb.from('challenge_submissions').select('*').eq('user_id', userId)
+  ]);
 
   const progressMap = {};
   (progress || []).forEach(p => { progressMap[p.lesson_id] = p; });
+
+  // Map challenges and submissions by level
+  const challengeByLevel = {};
+  (challenges || []).forEach(c => { challengeByLevel[c.level] = c; });
+  const submissionByChallengeId = {};
+  (submissions || []).forEach(s => { submissionByChallengeId[s.challenge_id] = s; });
 
   const list = document.getElementById('lesson-list');
   list.innerHTML = '';
@@ -541,10 +548,130 @@ async function showLessons(sb, userId, subject) {
       list.appendChild(item);
       previousDone = done;
     });
+
+    // After all 5 lessons: add challenge as 6th item if level is complete
+    const allDone = lvlLessons.every(l => progressMap[l.id]?.completed);
+    const challenge = challengeByLevel[parseInt(lvl)];
+    if (allDone && challenge) {
+      const sub = submissionByChallengeId[challenge.id];
+      const challengeItem = document.createElement('div');
+      challengeItem.className = `lesson-item lesson-item--challenge${sub?.status === 'approved' ? ' completed' : ''}`;
+      challengeItem.style.animationDelay = `${lvlLessons.length * 0.05}s`;
+
+      let statusIcon, statusMeta;
+      if (sub?.status === 'approved') {
+        statusIcon = '✅';
+        statusMeta = `Bestätigt · +${sub.xp_awarded || 250} XP`;
+      } else if (sub?.status === 'pending') {
+        statusIcon = '⏳';
+        statusMeta = 'Eingereicht · wartet auf Eltern';
+      } else {
+        statusIcon = '🎯';
+        statusMeta = '250 XP · Praktische Übung';
+      }
+
+      challengeItem.innerHTML = `
+        <div class="lesson-item__number" style="background:linear-gradient(135deg,#7c6aff,#ff6a9e);color:#fff;font-size:.9rem">${statusIcon}</div>
+        <div class="lesson-item__body">
+          <div class="lesson-item__title">${challenge.title}</div>
+          <div class="lesson-item__meta">${statusMeta}</div>
+        </div>
+        <div style="color:var(--purple);font-size:.8rem;font-weight:600;white-space:nowrap">Level ${lvl} Challenge</div>
+      `;
+
+      if (sub?.status !== 'approved') {
+        challengeItem.addEventListener('click', () => showChallengeModal(challenge, sub, userId, sb, subject));
+      }
+      list.appendChild(challengeItem);
+    }
   });
 }
 
-/* ─── Challenges ─── */
+/* ─── Challenge modal (inline in lesson list) ─── */
+function showChallengeModal(challenge, existingSub, userId, sb, subject) {
+  const existing = document.getElementById('challenge-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'challenge-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  const isPending = existingSub?.status === 'pending';
+
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:480px;width:100%;animation:fadeUp .3s ease">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div>
+          <div style="font-size:.8rem;color:var(--purple);font-weight:600;margin-bottom:4px">🎯 Level ${challenge.level} Challenge</div>
+          <h3 style="margin:0;font-size:1.1rem">${challenge.title}</h3>
+        </div>
+        <button onclick="document.getElementById('challenge-modal').remove()" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;padding:0 0 0 12px">✕</button>
+      </div>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:20px;line-height:1.6">${challenge.description}</p>
+      ${isPending
+        ? `<div style="background:rgba(255,204,106,.1);border:1px solid rgba(255,204,106,.3);border-radius:var(--radius-sm);padding:12px;color:var(--yellow);font-size:.875rem">⏳ Bereits eingereicht — wartet auf Bestätigung der Eltern.</div>`
+        : `<div>
+            <textarea id="challenge-text" placeholder="Beschreibe kurz was du gemacht hast…" style="width:100%;min-height:90px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--text);font-family:inherit;font-size:.9rem;resize:vertical;box-sizing:border-box"></textarea>
+            <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+              <label style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;cursor:pointer;font-size:.85rem;color:var(--muted)">
+                📷 Foto (optional)<input type="file" id="challenge-photo" accept="image/*" style="display:none">
+              </label>
+              <span id="challenge-photo-name" style="font-size:.8rem;color:var(--muted)"></span>
+            </div>
+            <img id="challenge-preview" style="display:none;max-width:100%;border-radius:var(--radius-sm);margin-top:10px" />
+            <button id="challenge-submit-btn" class="btn btn-primary w-full" style="margin-top:16px">Einreichen 🚀 (+250 XP)</button>
+          </div>`
+      }
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  if (!isPending) {
+    document.getElementById('challenge-photo').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('challenge-photo-name').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = document.getElementById('challenge-preview');
+        img.src = ev.target.result; img.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('challenge-submit-btn').addEventListener('click', async () => {
+      const text = document.getElementById('challenge-text').value.trim();
+      if (!text) { showToast('Bitte beschreibe was du gemacht hast.', 'error'); return; }
+      const btn = document.getElementById('challenge-submit-btn');
+      btn.disabled = true; btn.textContent = 'Wird eingereicht…';
+
+      let photoUrl = null;
+      const file = document.getElementById('challenge-photo').files[0];
+      if (file) {
+        try {
+          const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(file); });
+          const up = await fetch('/api/upload', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ type:'photo', userId, challengeId: challenge.id, fileName: file.name, fileType: file.type, fileBase64: base64 }) });
+          const upData = await up.json();
+          if (upData.url) photoUrl = upData.url;
+        } catch {}
+      }
+
+      try {
+        await fetch('/api/submit-challenge', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId, challengeId: challenge.id, textResponse: text, photoUrl }) });
+        modal.remove();
+        showToast('Challenge eingereicht! Die Eltern bestätigen es. 🎉', 'success');
+        // Reload lesson list
+        await showLessons(sb, userId, subject);
+      } catch {
+        btn.disabled = false; btn.textContent = 'Einreichen 🚀 (+250 XP)';
+        showToast('Fehler beim Einreichen.', 'error');
+      }
+    });
+  }
+}
+
+/* ─── Challenges (home page section — keep for overview) ─── */
 async function loadChallenges(sb, userId) {
   // Find all levels the user has completed (has stickers for)
   const { data: stickers } = await sb
