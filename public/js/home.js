@@ -31,9 +31,10 @@ async function initHome() {
   setupAvatarUpload(sb, user.id, avatarEl);
   loadAvatar(sb, user.id, avatarEl);
 
-  // Check onboarding — show once if fs_onboarding_v2 not yet set
+  // Check onboarding — show once per device until completed
   const { data: profile } = await sb.from('child_profiles').select('interests').eq('user_id', user.id).maybeSingle();
-  if (!localStorage.getItem('fs_onboarding_v2') || !profile || !profile.interests || profile.interests.length === 0) {
+  const needsOnboarding = !localStorage.getItem('fs_onboarding_v2') && (!profile?.interests?.length);
+  if (needsOnboarding) {
     document.getElementById('ob-name').textContent = name;
     showOnboarding(sb, user.id);
     hideLoader();
