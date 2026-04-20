@@ -26,11 +26,48 @@ async function initLogin() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) { await redirectByRole(sb); return; }
 
+  // ── Role picked by user (set in step 1) ──
+  let selectedRole = 'lenny'; // default
+
+  // ── Helper: show auth form for a given role ──
+  function showAuthView(role) {
+    selectedRole = role;
+    const isParent = role === 'parent';
+    const label    = isParent ? '👨‍💼 Elternteil' : '🧑‍🚀 Kind';
+
+    document.getElementById('view-role-pick').style.display = 'none';
+    document.getElementById('view-auth').style.display      = '';
+    document.getElementById('login-role-badge').textContent    = label;
+    document.getElementById('register-role-badge').textContent = label;
+
+    // Reset to login tab
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-register').classList.remove('active');
+    document.getElementById('view-login').style.display    = '';
+    document.getElementById('view-register').style.display = 'none';
+    hideError(); hideSuccess();
+    document.getElementById('email').focus();
+  }
+
+  function showRolePick() {
+    document.getElementById('view-auth').style.display      = 'none';
+    document.getElementById('view-role-pick').style.display = '';
+    hideError(); hideSuccess();
+  }
+
+  // ── Step 1: Role pick ──
+  document.getElementById('pick-child').addEventListener('click',  () => showAuthView('lenny'));
+  document.getElementById('pick-parent').addEventListener('click', () => showAuthView('parent'));
+
+  // ── Back buttons ──
+  document.getElementById('back-from-login').addEventListener('click',    showRolePick);
+  document.getElementById('back-from-register').addEventListener('click', showRolePick);
+
   // ── Tab switching ──
   document.getElementById('tab-login').addEventListener('click', () => {
     document.getElementById('tab-login').classList.add('active');
     document.getElementById('tab-register').classList.remove('active');
-    document.getElementById('view-login').style.display = '';
+    document.getElementById('view-login').style.display    = '';
     document.getElementById('view-register').style.display = 'none';
     hideError(); hideSuccess();
   });
@@ -38,18 +75,8 @@ async function initLogin() {
     document.getElementById('tab-register').classList.add('active');
     document.getElementById('tab-login').classList.remove('active');
     document.getElementById('view-register').style.display = '';
-    document.getElementById('view-login').style.display = 'none';
+    document.getElementById('view-login').style.display    = 'none';
     hideError(); hideSuccess();
-  });
-
-  // ── Login role selector (quick-fill) ──
-  document.querySelectorAll('#view-login .role-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#view-login .role-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      if (btn.dataset.email) document.getElementById('email').value = btn.dataset.email;
-      if (btn.dataset.pw)    document.getElementById('password').value = btn.dataset.pw;
-    });
   });
 
   // ── Login form ──
@@ -62,16 +89,6 @@ async function initLogin() {
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) { showError('Anmeldung fehlgeschlagen: ' + error.message); setLoading('login', false); return; }
     await redirectByRole(sb);
-  });
-
-  // ── Register role selector ──
-  let regRole = 'lenny';
-  document.querySelectorAll('#reg-role-selector .role-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#reg-role-selector .role-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      regRole = btn.dataset.role;
-    });
   });
 
   // ── Register form ──
@@ -93,15 +110,14 @@ async function initLogin() {
       await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'register', userId: data.user.id, email, role: regRole })
+        body: JSON.stringify({ action: 'register', userId: data.user.id, email, role: selectedRole })
       }).catch(() => {});
     }
 
     setLoading('register', false);
-    // Always show success and let user log in manually (don't auto-login)
+    // Show success, switch to login tab
     showSuccess('✅ Konto erstellt! Jetzt anmelden.');
     document.getElementById('register-form').reset();
-    // Switch to login tab after short delay
     setTimeout(() => {
       document.getElementById('tab-login').click();
     }, 1500);

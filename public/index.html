@@ -9,7 +9,7 @@
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
 
     .login-wrap {
-      width: 100%; max-width: 420px;
+      width: 100%; max-width: 440px;
       animation: fadeUp .45s ease;
     }
     .login-logo {
@@ -29,16 +29,64 @@
       border-radius: var(--radius);
       padding: 32px;
     }
-    .login-card h2 { margin-bottom: 8px; }
-    .login-card p  { color: var(--muted); font-size: .9rem; margin-bottom: 28px; }
+
+    /* ── Role picker ── */
+    .role-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .role-pick-btn {
+      padding: 28px 16px;
+      border-radius: var(--radius);
+      border: 2px solid var(--border);
+      background: var(--bg2);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .role-pick-btn:hover {
+      border-color: var(--purple);
+      background: rgba(124,106,255,.08);
+      transform: translateY(-2px);
+    }
+    .role-pick-btn__emoji { font-size: 2.6rem; display: block; margin-bottom: 10px; }
+    .role-pick-btn__name  { font-weight: 700; font-size: 1.05rem; color: var(--text); }
+    .role-pick-btn__sub   { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Auth form ── */
+    .form-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 22px;
+    }
+    .form-back {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1.2rem; padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      line-height: 1;
+    }
+    .form-back:hover { color: var(--text); background: var(--bg2); }
+    .form-role-badge {
+      font-size: .8rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+      background: rgba(124,106,255,.15); color: var(--purple);
+    }
 
     .form-group { margin-bottom: 18px; }
     .form-label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
 
-    .login-footer {
-      text-align: center; margin-top: 20px;
-      font-size: .85rem; color: var(--muted);
+    .tab-bar {
+      display: grid; grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
     }
+    .tab-btn {
+      padding: 11px; text-align: center;
+      font-weight: 600; font-size: .9rem;
+      color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: var(--transition);
+      background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .tab-btn.active { color: var(--purple); border-bottom-color: var(--purple); }
 
     .error-msg {
       background: rgba(255,106,158,.1);
@@ -63,43 +111,6 @@
       display: none;
     }
     .success-msg.visible { display: block; }
-
-    .role-selector {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-      margin-bottom: 20px;
-    }
-    .role-btn {
-      padding: 14px 10px;
-      border-radius: var(--radius-sm);
-      border: 2px solid var(--border);
-      background: var(--bg2);
-      color: var(--muted);
-      text-align: center;
-      cursor: pointer;
-      transition: var(--transition);
-      font-family: 'DM Sans', sans-serif;
-    }
-    .role-btn:hover  { border-color: var(--purple); color: var(--text); }
-    .role-btn.selected { border-color: var(--purple); background: rgba(124,106,255,.1); color: var(--text); }
-    .role-btn__emoji { font-size: 1.8rem; display: block; margin-bottom: 4px; }
-    .role-btn__name  { font-weight: 600; font-size: .9rem; }
-    .role-btn__sub   { font-size: .75rem; margin-top: 2px; }
-
-    .tab-bar {
-      display: grid; grid-template-columns: 1fr 1fr;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-    .tab-btn {
-      padding: 12px; text-align: center;
-      font-weight: 600; font-size: .9rem;
-      color: var(--muted); cursor: pointer;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
-      transition: var(--transition);
-      background: none; border-top: none; border-left: none; border-right: none;
-    }
-    .tab-btn.active { color: var(--purple); border-bottom-color: var(--purple); }
   </style>
 </head>
 <body>
@@ -115,89 +126,86 @@
 
     <div class="login-card">
 
-      <!-- Tab bar -->
-      <div class="tab-bar">
-        <button class="tab-btn active" id="tab-login">Anmelden</button>
-        <button class="tab-btn" id="tab-register">Registrieren</button>
+      <!-- ── STEP 1: Role picker ── -->
+      <div id="view-role-pick">
+        <p style="text-align:center; color:var(--muted); font-size:.9rem; margin-bottom:22px;">Wer bist du?</p>
+        <div class="role-pick">
+          <button class="role-pick-btn" id="pick-child">
+            <span class="role-pick-btn__emoji">🧑‍🚀</span>
+            <div class="role-pick-btn__name">Kind</div>
+            <div class="role-pick-btn__sub">Ich lerne</div>
+          </button>
+          <button class="role-pick-btn" id="pick-parent">
+            <span class="role-pick-btn__emoji">👨‍💼</span>
+            <div class="role-pick-btn__name">Elternteil</div>
+            <div class="role-pick-btn__sub">Übersicht & Einstellungen</div>
+          </button>
+        </div>
       </div>
 
-      <div id="error-msg"   class="error-msg"></div>
-      <div id="success-msg" class="success-msg"></div>
+      <!-- ── STEP 2: Login / Register form ── -->
+      <div id="view-auth" style="display:none">
 
-      <!-- ── LOGIN VIEW ── -->
-      <div id="view-login">
-        <div class="role-selector" style="grid-template-columns:1fr 1fr 1fr">
-          <div class="role-btn selected" data-role="lenny" data-email="lenny@flowschool.app">
-            <span class="role-btn__emoji">🧑‍🚀</span>
-            <div class="role-btn__name">Lenny</div>
-            <div class="role-btn__sub">Ich lerne</div>
-          </div>
-          <div class="role-btn" data-role="parent" data-email="mike@flowschool.app">
-            <span class="role-btn__emoji">👨‍💼</span>
-            <div class="role-btn__name">Eltern</div>
-            <div class="role-btn__sub">Eltern-Ansicht</div>
-          </div>
-          <div class="role-btn" data-role="lenny" data-email="testuser@flowschool.app" data-pw="Test123!">
-            <span class="role-btn__emoji">🧪</span>
-            <div class="role-btn__name">Testuser</div>
-            <div class="role-btn__sub">Test-Konto</div>
-          </div>
+        <div id="error-msg"   class="error-msg"></div>
+        <div id="success-msg" class="success-msg"></div>
+
+        <!-- Tab bar -->
+        <div class="tab-bar">
+          <button class="tab-btn active" id="tab-login">Anmelden</button>
+          <button class="tab-btn" id="tab-register">Registrieren</button>
         </div>
 
-        <form id="login-form">
-          <div class="form-group">
-            <label class="form-label" for="email">E-Mail</label>
-            <input class="input" type="email" id="email" placeholder="deine@email.de" required />
+        <!-- ── LOGIN VIEW ── -->
+        <div id="view-login">
+          <div class="form-header">
+            <button class="form-back" id="back-from-login" title="Zurück">←</button>
+            <span id="login-role-badge" class="form-role-badge"></span>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="password">Passwort</label>
-            <input class="input" type="password" id="password" placeholder="••••••••" required />
-          </div>
-          <button class="btn btn-primary btn-lg w-full" type="submit" id="login-btn">
-            <span id="login-btn-text">Anmelden</span>
-            <span id="login-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px"></span>
-          </button>
-        </form>
-      </div>
-
-      <!-- ── REGISTER VIEW ── -->
-      <div id="view-register" style="display:none">
-        <p style="margin-bottom:20px">Neues Konto erstellen — für Kind oder Elternteil.</p>
-
-        <div class="role-selector" id="reg-role-selector">
-          <div class="role-btn selected" data-role="lenny">
-            <span class="role-btn__emoji">🧑‍🚀</span>
-            <div class="role-btn__name">Kind</div>
-            <div class="role-btn__sub">Ich lerne</div>
-          </div>
-          <div class="role-btn" data-role="parent">
-            <span class="role-btn__emoji">👨‍💼</span>
-            <div class="role-btn__name">Elternteil</div>
-            <div class="role-btn__sub">Eltern-Ansicht</div>
-          </div>
+          <form id="login-form">
+            <div class="form-group">
+              <label class="form-label" for="email">E-Mail</label>
+              <input class="input" type="email" id="email" placeholder="deine@email.de" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="password">Passwort</label>
+              <input class="input" type="password" id="password" placeholder="••••••••" required />
+            </div>
+            <button class="btn btn-primary btn-lg w-full" type="submit" id="login-btn">
+              <span id="login-btn-text">Anmelden</span>
+              <span id="login-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px"></span>
+            </button>
+          </form>
         </div>
 
-        <form id="register-form">
-          <div class="form-group">
-            <label class="form-label" for="reg-name">Name</label>
-            <input class="input" type="text" id="reg-name" placeholder="z.B. Leon oder Papa" required />
+        <!-- ── REGISTER VIEW ── -->
+        <div id="view-register" style="display:none">
+          <div class="form-header">
+            <button class="form-back" id="back-from-register" title="Zurück">←</button>
+            <span id="register-role-badge" class="form-role-badge"></span>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="reg-email">E-Mail</label>
-            <input class="input" type="email" id="reg-email" placeholder="deine@email.de" required />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="reg-password">Passwort</label>
-            <input class="input" type="password" id="reg-password" placeholder="Mindestens 6 Zeichen" minlength="6" required />
-          </div>
-          <button class="btn btn-primary btn-lg w-full" type="submit" id="register-btn">
-            <span id="register-btn-text">Konto erstellen</span>
-            <span id="register-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px"></span>
-          </button>
-        </form>
-      </div>
+          <form id="register-form">
+            <div class="form-group">
+              <label class="form-label" for="reg-name">Name</label>
+              <input class="input" type="text" id="reg-name" placeholder="z.B. Leon oder Papa" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-email">E-Mail</label>
+              <input class="input" type="email" id="reg-email" placeholder="deine@email.de" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-password">Passwort</label>
+              <input class="input" type="password" id="reg-password" placeholder="Mindestens 6 Zeichen" minlength="6" required />
+            </div>
+            <button class="btn btn-primary btn-lg w-full" type="submit" id="register-btn">
+              <span id="register-btn-text">Konto erstellen</span>
+              <span id="register-spinner" class="spinner hidden" style="width:18px;height:18px;border-width:2px"></span>
+            </button>
+          </form>
+        </div>
 
-    </div>
+      </div><!-- /view-auth -->
+
+    </div><!-- /login-card -->
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>

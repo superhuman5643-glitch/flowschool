@@ -10,6 +10,13 @@ export default async function handler(req, res) {
   const { userId, type, data } = req.body;
   if (!userId || !type || !data) return res.status(400).json({ error: 'Missing fields' });
 
+  // Fetch child's name dynamically
+  let userName = 'du';
+  try {
+    const { data: { user } } = await sb.auth.admin.getUserById(userId);
+    userName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'du';
+  } catch {}
+
   try {
     const { data: profile } = await sb.from('child_profiles')
       .select('*').eq('user_id', userId).single();
@@ -24,17 +31,17 @@ export default async function handler(req, res) {
     if (type === 'quiz') {
       const { questions, answers, lessonTitle, subject, attempts } = data;
       inputContext = `Thema: "${lessonTitle}" (Fach: ${subject}), Versuch ${attempts}:
-${questions.map((q, i) => `Frage: ${q}\nLennys Antwort: ${answers[i]}`).join('\n\n')}`;
+${questions.map((q, i) => `Frage: ${q}\n${userName}s Antwort: ${answers[i]}`).join('\n\n')}`;
     } else if (type === 'chat') {
       const { chatHistory, lessonTitle } = data;
       inputContext = `Chat aus Lektion "${lessonTitle}":
-${chatHistory.map(m => `${m.role === 'user' ? 'Lenny' : 'KI'}: ${m.content}`).join('\n')}`;
+${chatHistory.map(m => `${m.role === 'user' ? userName : 'KI'}: ${m.content}`).join('\n')}`;
     }
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 600,
-      system: `Du analysierst Lerninteraktionen eines 12-jährigen Schülers (Lenny) und pflegst sein Lernprofil.
+      system: `Du analysierst Lerninteraktionen eines Schülers namens ${userName} und pflegst sein Lernprofil.
 Aktuelles Profil:
 - Interessen: ${existing.interests.join(', ') || 'noch keine'}
 - Schwache Themen: ${existing.weak_topics.join(', ') || 'noch keine'}
