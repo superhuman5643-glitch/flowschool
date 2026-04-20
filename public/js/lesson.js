@@ -768,10 +768,29 @@ async function loadNextLesson() {
     .limit(1)
     .single();
 
+  // Detect level boundary: sort_order divisible by 5 = last lesson of a level
+  const completedLevel = Math.ceil(current.sort_order / 5);
+  const isLevelEnd = current.sort_order % 5 === 0;
+
+  if (isLevelEnd) {
+    // Fire level-up immediately to generate challenge + next lessons
+    fetch('/api/level-up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId:      state.user.id,
+        subjectId:   state.subjectId,
+        subjectName: state.subjectName,
+        completedLevel
+      })
+    }).catch(() => {});
+  }
+
   const btn = document.getElementById('next-lesson-btn');
   if (!btn) return;
 
-  if (next) {
+  if (next && !isLevelEnd) {
+    // Next lesson is in the same level — go directly
     btn.addEventListener('click', () => {
       const params = new URLSearchParams({
         lessonId: next.id, subjectId: state.subjectId,
@@ -780,7 +799,8 @@ async function loadNextLesson() {
       window.location.href = `/lesson?${params}`;
     });
   } else {
-    btn.textContent = 'Zurück zur Übersicht';
+    // Level finished — send back to subject list to see the challenge
+    btn.textContent = isLevelEnd ? '🎯 Zur Praktischen Übung' : 'Zurück zur Übersicht';
     btn.addEventListener('click', () => window.location.href = '/home');
   }
 }
