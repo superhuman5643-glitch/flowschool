@@ -414,16 +414,8 @@ function onYTStateChange(event) {
   if (event.data === 1 || event.data === 2) {
     updateVideoProgress(event.target);
   }
-  // Video ended (0) — replace player with done screen to hide YouTube suggestions
-  if (event.data === 0) {
-    if (state.ytCheckInterval) { clearInterval(state.ytCheckInterval); state.ytCheckInterval = null; }
-    const wrapper = document.getElementById('video-wrapper');
-    wrapper.innerHTML = `
-      <div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:var(--radius)">
-        <div style="font-size:3rem">✅</div>
-        <div style="font-weight:700;font-size:1.1rem">Video geschaut!</div>
-        <div class="text-muted text-sm">Weiter zur Lernkontrolle</div>
-      </div>`;
+  // Video ended (0) — overlay already in place, just mark done if not yet
+  if (event.data === 0 && !state.videoDone) {
     state.videoDone = true;
     document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
     document.getElementById('video-hint').style.color = 'var(--green)';
@@ -465,15 +457,15 @@ function updateVideoProgress(playerArg) {
 
   if (pct >= 90 && !state.videoDone) {
     state.videoDone = true;
-    if (state.ytCheckInterval) { clearInterval(state.ytCheckInterval); state.ytCheckInterval = null; }
-    // Replace player immediately at 90% to prevent YouTube end-screen suggestions
+    // Overlay blocks all YouTube link clicks (suggestions, channel, etc.) — video keeps playing
     const wrapper = document.getElementById('video-wrapper');
-    if (wrapper) wrapper.innerHTML = `
-      <div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:var(--radius)">
-        <div style="font-size:3rem">✅</div>
-        <div style="font-weight:700;font-size:1.1rem">Video geschaut!</div>
-        <div class="text-muted text-sm">Weiter zur Lernkontrolle</div>
-      </div>`;
+    if (wrapper && !wrapper.querySelector('#yt-overlay')) {
+      const overlay = document.createElement('div');
+      overlay.id = 'yt-overlay';
+      overlay.style.cssText = 'position:absolute;inset:0;z-index:10;cursor:default';
+      overlay.addEventListener('click', e => e.preventDefault());
+      wrapper.appendChild(overlay);
+    }
     document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
     document.getElementById('video-hint').style.color = 'var(--green)';
     checkContinueUnlock();
@@ -501,6 +493,32 @@ function unlockQuiz() {
   document.getElementById('quiz-section').classList.remove('hidden');
   document.getElementById('continue-btn').disabled = true;
   document.getElementById('footer-info').textContent = 'Beantworte die Fragen mit eigenen Worten (min. 15 Wörter)';
+
+  // "Lektion nochmal lesen" toggle — nur Text, kein Video/Chat/Fragen
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'btn btn-secondary btn-sm';
+  toggleBtn.style.cssText = 'margin-bottom:20px;width:100%';
+  toggleBtn.textContent = '📖 Lektion nochmal lesen';
+  let lessonVisible = false;
+
+  const lessonReview = document.createElement('div');
+  lessonReview.style.cssText = 'display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;max-height:60vh;overflow-y:auto';
+  // Strip interactive elements — only show text content
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = state.lessonContent;
+  tempDiv.querySelectorAll('button,input,textarea,select,a').forEach(el => el.replaceWith(document.createTextNode(el.textContent)));
+  lessonReview.innerHTML = tempDiv.innerHTML;
+
+  toggleBtn.addEventListener('click', () => {
+    lessonVisible = !lessonVisible;
+    lessonReview.style.display = lessonVisible ? 'block' : 'none';
+    toggleBtn.textContent = lessonVisible ? '📖 Lektion schließen' : '📖 Lektion nochmal lesen';
+    if (lessonVisible) lessonReview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  const quizContainer = document.getElementById('quiz-section');
+  quizContainer.insertBefore(lessonReview, quizContainer.firstChild);
+  quizContainer.insertBefore(toggleBtn, quizContainer.firstChild);
 
   const container = document.getElementById('quiz-questions');
   container.innerHTML = '';
