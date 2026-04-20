@@ -24,57 +24,82 @@ async function initLogin() {
 
   // If already logged in, redirect
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await redirectByRole(sb);
-    return;
-  }
+  if (session) { await redirectByRole(sb); return; }
 
-  // Role selector
-  let selectedRole = 'lenny';
-  document.querySelectorAll('.role-btn').forEach(btn => {
+  // ── Tab switching ──
+  document.getElementById('tab-login').addEventListener('click', () => {
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-register').classList.remove('active');
+    document.getElementById('view-login').style.display = '';
+    document.getElementById('view-register').style.display = 'none';
+    hideError(); hideSuccess();
+  });
+  document.getElementById('tab-register').addEventListener('click', () => {
+    document.getElementById('tab-register').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('view-register').style.display = '';
+    document.getElementById('view-login').style.display = 'none';
+    hideError(); hideSuccess();
+  });
+
+  // ── Login role selector (quick-fill) ──
+  document.querySelectorAll('#view-login .role-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+      document.querySelectorAll('#view-login .role-btn').forEach(b => b.classList.remove('selected'));
       btn.classList.add('selected');
-      selectedRole = btn.dataset.role;
       if (btn.dataset.email) document.getElementById('email').value = btn.dataset.email;
       if (btn.dataset.pw)    document.getElementById('password').value = btn.dataset.pw;
     });
   });
 
-  // Login form
+  // ── Login form ──
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email    = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    setLoginLoading(true);
-    hideError();
+    setLoading('login', true); hideError();
 
     const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      showError('Anmeldung fehlgeschlagen: ' + error.message);
-      setLoginLoading(false);
-      return;
-    }
+    if (error) { showError('Anmeldung fehlgeschlagen: ' + error.message); setLoading('login', false); return; }
     await redirectByRole(sb);
   });
 
-  // Sign up link
-  document.getElementById('signup-link').addEventListener('click', async (e) => {
+  // ── Register role selector ──
+  let regRole = 'lenny';
+  document.querySelectorAll('#reg-role-selector .role-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#reg-role-selector .role-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      regRole = btn.dataset.role;
+    });
+  });
+
+  // ── Register form ──
+  document.getElementById('register-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email    = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    if (!email || !password) { showError('Bitte E-Mail und Passwort eingeben.'); return; }
-    setLoginLoading(true);
+    const name     = document.getElementById('reg-name').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    setLoading('register', true); hideError(); hideSuccess();
 
-    const { data, error } = await sb.auth.signUp({ email, password });
-    if (error) { showError(error.message); setLoginLoading(false); return; }
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { display_name: name } }
+    });
+    if (error) { showError(error.message); setLoading('register', false); return; }
 
-    // Create user profile
     if (data.user) {
-      await sb.from('users').insert({ id: data.user.id, email, role: selectedRole });
+      await sb.from('users').insert({ id: data.user.id, email, role: regRole }).catch(() => {});
     }
-    showError('Bestätigungs-E-Mail wurde gesendet! Dann hier anmelden.');
-    setLoginLoading(false);
+
+    setLoading('register', false);
+    if (data.session) {
+      // Email confirmation disabled — log in directly
+      await redirectByRole(sb);
+    } else {
+      showSuccess('✅ Konto erstellt! Bitte E-Mail bestätigen und dann anmelden.');
+      document.getElementById('register-form').reset();
+    }
   });
 }
 
@@ -86,18 +111,30 @@ async function redirectByRole(sb) {
   window.location.href = role === 'parent' ? '/parent' : '/home';
 }
 
-function setLoginLoading(on) {
-  document.getElementById('login-btn').disabled = on;
-  document.getElementById('login-btn-text').textContent = on ? 'Laden…' : 'Anmelden';
-  document.getElementById('login-spinner').classList.toggle('hidden', !on);
+function setLoading(type, on) {
+  if (type === 'login') {
+    document.getElementById('login-btn').disabled = on;
+    document.getElementById('login-btn-text').textContent = on ? 'Laden…' : 'Anmelden';
+    document.getElementById('login-spinner').classList.toggle('hidden', !on);
+  } else {
+    document.getElementById('register-btn').disabled = on;
+    document.getElementById('register-btn-text').textContent = on ? 'Laden…' : 'Konto erstellen';
+    document.getElementById('register-spinner').classList.toggle('hidden', !on);
+  }
 }
 function showError(msg) {
   const el = document.getElementById('error-msg');
-  el.textContent = msg;
-  el.classList.add('visible');
+  el.textContent = msg; el.classList.add('visible');
 }
 function hideError() {
   document.getElementById('error-msg').classList.remove('visible');
+}
+function showSuccess(msg) {
+  const el = document.getElementById('success-msg');
+  el.textContent = msg; el.classList.add('visible');
+}
+function hideSuccess() {
+  document.getElementById('success-msg').classList.remove('visible');
 }
 
 /* ─── Auth guard (used by home/lesson/parent) ─── */
