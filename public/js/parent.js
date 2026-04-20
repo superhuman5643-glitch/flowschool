@@ -379,11 +379,23 @@ async function loadChallengeReviews(sb, lennyId) {
     const item    = document.createElement('div');
     item.className = 'challenge-review-item';
 
-    const actionsHtml = sub.status === 'approved'
-      ? `<div class="challenge-review-item__approved">✅ Bestätigt · +${sub.xp_awarded || 50} XP</div>`
-      : `<div class="challenge-review-item__actions">
-           <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px" data-id="${sub.id}">✅ Bestätigen (+250 XP)</button>
-         </div>`;
+    let actionsHtml;
+    if (sub.status === 'approved') {
+      actionsHtml = `<div class="challenge-review-item__approved">✅ Bestätigt · +${sub.xp_awarded || 250} XP</div>`;
+    } else if (sub.status === 'rejected') {
+      actionsHtml = `<div class="challenge-review-item__rejected">❌ Abgelehnt${sub.reject_reason ? ` — ${sub.reject_reason}` : ''}</div>`;
+    } else {
+      actionsHtml = `
+        <div class="challenge-review-item__actions">
+          <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px" data-action="approve" data-id="${sub.id}">✅ Bestätigen (+250 XP)</button>
+          <button class="btn" style="font-size:.85rem;padding:8px 16px;margin-left:8px" data-action="reject-show" data-id="${sub.id}">❌ Ablehnen</button>
+        </div>
+        <div class="challenge-review-item__reject-form" id="reject-form-${sub.id}" style="display:none;margin-top:10px">
+          <textarea id="reject-reason-${sub.id}" placeholder="Begründung…" style="width:100%;min-height:70px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);font-family:inherit;font-size:.85rem;resize:vertical;box-sizing:border-box"></textarea>
+          <button class="btn btn-primary" style="font-size:.85rem;padding:8px 16px;margin-top:8px" data-action="reject-submit" data-id="${sub.id}">Absenden</button>
+        </div>
+      `;
+    }
 
     item.innerHTML = `
       <div class="challenge-review-item__header">
@@ -396,8 +408,9 @@ async function loadChallengeReviews(sb, lennyId) {
       ${actionsHtml}
     `;
 
-    if (sub.status !== 'approved') {
-      item.querySelector('[data-id]')?.addEventListener('click', async (e) => {
+    if (sub.status === 'pending') {
+      // Approve button
+      item.querySelector('[data-action="approve"]')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         btn.disabled = true;
         btn.textContent = 'Wird bestätigt…';
@@ -405,14 +418,41 @@ async function loadChallengeReviews(sb, lennyId) {
           await fetch('/api/approve-challenge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ submissionId: sub.id })
+            body: JSON.stringify({ submissionId: sub.id, action: 'approve' })
           });
-          showToast('Challenge bestätigt! Lenny bekommt +50 XP 🎉', 'success');
+          showToast('Challenge bestätigt! 🎉', 'success');
           await loadChallengeReviews(sb, lennyId);
         } catch {
           btn.disabled = false;
           btn.textContent = '✅ Bestätigen (+250 XP)';
           showToast('Fehler beim Bestätigen.', 'error');
+        }
+      });
+
+      // Show reject form
+      item.querySelector('[data-action="reject-show"]')?.addEventListener('click', () => {
+        const form = document.getElementById(`reject-form-${sub.id}`);
+        if (form) form.style.display = form.style.display === 'none' ? '' : 'none';
+      });
+
+      // Submit rejection
+      item.querySelector('[data-action="reject-submit"]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const reason = document.getElementById(`reject-reason-${sub.id}`)?.value.trim();
+        btn.disabled = true;
+        btn.textContent = 'Wird abgelehnt…';
+        try {
+          await fetch('/api/approve-challenge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ submissionId: sub.id, action: 'reject', reason })
+          });
+          showToast('Challenge abgelehnt.', 'success');
+          await loadChallengeReviews(sb, lennyId);
+        } catch {
+          btn.disabled = false;
+          btn.textContent = 'Absenden';
+          showToast('Fehler beim Ablehnen.', 'error');
         }
       });
     }

@@ -575,6 +575,9 @@ async function showLessons(sb, userId, subject) {
       } else if (sub?.status === 'pending') {
         statusIcon = '⏳';
         statusMeta = 'Eingereicht · wartet auf Eltern-Bestätigung';
+      } else if (sub?.status === 'rejected') {
+        statusIcon = '❌';
+        statusMeta = 'Abgelehnt · nochmal einreichen';
       } else {
         statusIcon = '🎯';
         statusMeta = '250 XP · Praktische Übung';
@@ -614,7 +617,12 @@ function showChallengeModal(challenge, existingSub, userId, sb, subject) {
   modal.id = 'challenge-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
 
-  const isPending = existingSub?.status === 'pending';
+  const isPending  = existingSub?.status === 'pending';
+  const isRejected = existingSub?.status === 'rejected';
+
+  const rejectedBanner = isRejected
+    ? `<div style="background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);border-radius:var(--radius-sm);padding:12px;color:#ff5050;font-size:.875rem;margin-bottom:16px">❌ Abgelehnt${existingSub.reject_reason ? ` — <em>${existingSub.reject_reason}</em>` : ''}<br><span style="color:var(--muted);font-size:.82rem">Reiche die Aufgabe nochmal ein:</span></div>`
+    : '';
 
   modal.innerHTML = `
     <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:480px;width:100%;animation:fadeUp .3s ease">
@@ -626,6 +634,7 @@ function showChallengeModal(challenge, existingSub, userId, sb, subject) {
         <button onclick="document.getElementById('challenge-modal').remove()" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;padding:0 0 0 12px">✕</button>
       </div>
       <p style="color:var(--muted);font-size:.9rem;margin-bottom:20px;line-height:1.6">${challenge.description}</p>
+      ${rejectedBanner}
       ${isPending
         ? `<div style="background:rgba(255,204,106,.1);border:1px solid rgba(255,204,106,.3);border-radius:var(--radius-sm);padding:12px;color:var(--yellow);font-size:.875rem">⏳ Bereits eingereicht — wartet auf Bestätigung der Eltern.</div>`
         : `<div>

@@ -5,10 +5,21 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { submissionId } = req.body;
+  const { submissionId, action = 'approve', reason } = req.body;
   if (!submissionId) return res.status(400).json({ error: 'Missing submissionId' });
 
   try {
+    if (action === 'reject') {
+      await sb.from('challenge_submissions').update({
+        status: 'rejected',
+        reject_reason: reason || null,
+        reviewed_at: new Date().toISOString()
+      }).eq('id', submissionId);
+
+      return res.json({ success: true });
+    }
+
+    // action === 'approve' (default)
     const { data: sub } = await sb
       .from('challenge_submissions')
       .select('user_id, challenges(bonus_xp)')
