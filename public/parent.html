@@ -24,14 +24,44 @@
 
     <!-- Greeting -->
     <div class="parent-header">
-      <div>
-        <div class="parent-header__greeting">Hallo 👋</div>
-        <h1 class="parent-header__title">Lennys Lernfortschritt</h1>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div>
+          <div class="parent-header__greeting">Hallo 👋</div>
+          <h1 class="parent-header__title" id="child-title">Lernfortschritt</h1>
+        </div>
+        <div id="child-selector-wrap" style="display:none;margin-top:4px">
+          <select class="input" id="child-selector" style="font-size:.9rem;padding:6px 14px;height:auto;cursor:pointer"></select>
+        </div>
       </div>
-      <div class="date-filter">
-        <button class="date-btn active" data-days="7">7 Tage</button>
-        <button class="date-btn" data-days="30">30 Tage</button>
-        <button class="date-btn" data-days="0">Gesamt</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" id="link-child-btn">＋ Kind verlinken</button>
+        <div class="date-filter">
+          <button class="date-btn active" data-days="7">7 Tage</button>
+          <button class="date-btn" data-days="30">30 Tage</button>
+          <button class="date-btn" data-days="0">Gesamt</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Link-child form (hidden by default) -->
+    <div id="link-child-form" style="display:none;margin-bottom:24px">
+      <div class="panel">
+        <div class="panel__header"><div class="panel__title">👶 Kind verlinken</div></div>
+        <div class="panel__body">
+          <p class="text-sm text-muted" style="margin-bottom:16px">Das Kind muss sich zuerst selbst registrieren. Dann hier die E-Mail eingeben.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:200px">
+              <label class="text-sm text-muted" style="display:block;margin-bottom:4px">E-Mail des Kindes</label>
+              <input class="input" id="link-child-email" type="email" placeholder="kind@email.de" />
+            </div>
+            <div style="flex:1;min-width:160px">
+              <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Spitzname (optional)</label>
+              <input class="input" id="link-child-nickname" placeholder="z.B. Leon" />
+            </div>
+            <button class="btn btn-primary" id="link-child-submit">Verlinken</button>
+          </div>
+          <div id="link-child-status" class="text-sm" style="margin-top:10px;min-height:20px"></div>
+        </div>
       </div>
     </div>
 
@@ -78,7 +108,7 @@
 
       <div class="panel">
         <div class="panel__header">
-          <div class="panel__title">❓ Lennys Fragen</div>
+          <div class="panel__title" id="questions-title">❓ Fragen</div>
         </div>
         <div class="panel__body">
           <div id="questions-list">

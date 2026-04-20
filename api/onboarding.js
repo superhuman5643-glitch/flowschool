@@ -9,14 +9,31 @@ export default async function handler(req, res) {
 
   // POST /api/onboarding { action: 'save', userId, interests, ... }
   if (action === 'save') {
-    const { userId, interests, strongTopics, weakTopics, learningStyle, businessDream, goal } = req.body;
+    const {
+      userId, interests, strongTopics, weakTopics,
+      learningStyle, commStyle, businessDream, goal,
+      age, schoolClass, favSubject, hardSubject,
+      motivations, concentration, vocabLevel
+    } = req.body;
     if (!userId) return res.status(400).json({ error: 'Missing userId' });
 
-    const notes = [
-      businessDream && `Business-Traum: ${businessDream}`,
-      goal          && `Ziel: ${goal}`,
-      learningStyle && `Lernstil: ${learningStyle}`,
-    ].filter(Boolean).join(' | ');
+    // Build rich learning_notes string for AI context
+    const notesParts = [];
+    if (age)                 notesParts.push(`Alter: ${age} Jahre`);
+    if (schoolClass)         notesParts.push(`Klasse: ${schoolClass}`);
+    if (favSubject)          notesParts.push(`Lieblingsfach: ${favSubject}`);
+    if (hardSubject)         notesParts.push(`Schwieriges Fach: ${hardSubject}`);
+    if (commStyle)           notesParts.push(`Ansprache-Stil: ${commStyle}`);
+    if (concentration)       notesParts.push(`Konzentrations-Dauer: ${concentration} Minuten`);
+    if (motivations?.length) notesParts.push(`Motivation: ${motivations.join(', ')}`);
+    if (businessDream)       notesParts.push(`Business-Traum: ${businessDream}`);
+    if (goal)                notesParts.push(`3-Monats-Ziel: ${goal}`);
+    if (learningStyle)       notesParts.push(`Lernstil: ${learningStyle}`);
+    const notes = notesParts.join(' | ');
+
+    // vocab_level: from questionnaire or derived from class
+    const cls   = parseInt(schoolClass, 10) || 6;
+    const level = vocabLevel || (cls <= 4 ? 1 : cls <= 7 ? 2 : 3);
 
     try {
       await sb.from('child_profiles').upsert({
@@ -26,7 +43,7 @@ export default async function handler(req, res) {
         weak_topics:        weakTopics  ? [weakTopics]   : [],
         preferred_examples: interests   || [],
         learning_notes:     notes,
-        vocab_level:        1,
+        vocab_level:        level,
       }, { onConflict: 'user_id' });
       return res.json({ ok: true });
     } catch (err) {
@@ -48,6 +65,58 @@ export default async function handler(req, res) {
       .eq('user_id', user.id);
 
     return res.json({ ok: true, userId: user.id });
+  }
+
+  // POST /api/onboarding { action: 'get-children', parentId }
+  if (action === 'get-children') {
+    const { parentId } = req.body;
+    if (!parentId) return res.status(400).json({ error: 'Missing parentId' });
+
+    const { data: links } = await sb
+      .from('parent_child_links')
+      .select('child_id, nickname')
+      .eq('parent_id', parentId);
+
+    if (!links || links.length === 0) return res.json({ children: [] });
+
+    const childIds = links.map(l => l.child_id);
+    const { data: users } = await sb.from('users').select('id, email').in('id', childIds);
+
+    const children = links.map(link => {
+      const user      = (users || []).find(u => u.id === link.child_id);
+      const emailName = (user?.email || 'kind').split('@')[0].replace(/[^a-zA-Z]/g, ' ').trim();
+      const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+      return { id: link.child_id, email: user?.email || '', displayName: link.nickname || displayName };
+    });
+
+    return res.json({ children });
+  }
+
+  // POST /api/onboarding { action: 'link-child', parentId, childEmail, nickname }
+  if (action === 'link-child') {
+    const { parentId, childEmail, nickname } = req.body;
+    if (!parentId || !childEmail) return res.status(400).json({ error: 'Missing fields' });
+
+    // Look up child via auth.users (works even if not in users table)
+    const { data: authList } = await sb.auth.admin.listUsers({ perPage: 1000 });
+    const childAuth = (authList?.users || []).find(
+      u => u.email?.toLowerCase() === childEmail.toLowerCase().trim()
+    );
+    if (!childAuth) return res.status(404).json({ error: 'Kind nicht gefunden. Bitte erst registrieren lassen.' });
+
+    // Check it's not a parent account
+    const { data: childRow } = await sb.from('users').select('role').eq('id', childAuth.id).maybeSingle();
+    if (childRow?.role === 'parent') return res.status(400).json({ error: 'Das ist ein Eltern-Konto, kein Kind-Konto.' });
+
+    try {
+      await sb.from('parent_child_links').insert({ parent_id: parentId, child_id: childAuth.id, nickname: nickname || null });
+      // Ensure child is in users table (fallback for manually created accounts)
+      await sb.from('users').upsert({ id: childAuth.id, email: childAuth.email, role: 'lenny' }, { onConflict: 'id' });
+      return res.json({ ok: true });
+    } catch (err) {
+      if (err.code === '23505') return res.status(409).json({ error: 'Kind ist bereits verlinkt.' });
+      return res.status(500).json({ error: err.message });
+    }
   }
 
   res.status(400).json({ error: 'Unknown action' });

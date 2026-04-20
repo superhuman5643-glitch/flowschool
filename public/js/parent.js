@@ -1,7 +1,10 @@
 /* ── FlowSchool — Parent dashboard ── */
 
-let parentCtx = null;
-let activeDays = 7;
+let parentCtx     = null;
+let activeDays    = 7;
+let activeChildId = null;
+let activeChildName = 'Kind';
+let linkedChildren  = [];
 
 async function initParent() {
   parentCtx = await requireAuth('parent');
@@ -16,38 +19,135 @@ async function initParent() {
       document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeDays = parseInt(btn.dataset.days, 10);
-      loadDashboard();
+      if (activeChildId) loadDashboard();
     });
   });
 
-  await Promise.all([loadDashboard(), loadVideoSettings()]);
+  // Link-child form toggle
+  document.getElementById('link-child-btn').addEventListener('click', () => {
+    const form = document.getElementById('link-child-form');
+    form.style.display = form.style.display === 'none' ? '' : 'none';
+  });
+  document.getElementById('link-child-submit').addEventListener('click', linkChild);
+
+  await loadChildren();
+  await loadVideoSettings();
   setupVideoSettingsSave();
   hideLoader();
 }
 
-async function loadDashboard() {
-  const { sb } = parentCtx;
+/* ─── Load linked children ─── */
+async function loadChildren() {
+  const { user } = parentCtx;
+  try {
+    const res  = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-children', parentId: user.id })
+    });
+    const data = await res.json();
+    linkedChildren = data.children || [];
+  } catch { linkedChildren = []; }
 
-  // Get Lenny's user ID from config (server-side, bypasses RLS)
-  const cfg = await getConfig();
-  const lennyId = cfg.lennyId;
+  const selectorWrap = document.getElementById('child-selector-wrap');
+  const selector     = document.getElementById('child-selector');
 
-  if (!lennyId) {
+  if (linkedChildren.length === 0) {
+    document.getElementById('child-title').textContent = 'Noch kein Kind verlinkt';
     showEmptyState();
+    document.getElementById('link-child-form').style.display = '';
     return;
   }
-  const since    = activeDays > 0
+
+  // Activate first child
+  activeChildId   = linkedChildren[0].id;
+  activeChildName = linkedChildren[0].displayName;
+  updateChildTitle();
+
+  // Show dropdown only if multiple children
+  if (linkedChildren.length > 1) {
+    selectorWrap.style.display = '';
+    selector.innerHTML = linkedChildren.map(c =>
+      `<option value="${c.id}">${c.displayName}</option>`
+    ).join('');
+    selector.addEventListener('change', () => {
+      const child = linkedChildren.find(c => c.id === selector.value);
+      if (child) {
+        activeChildId   = child.id;
+        activeChildName = child.displayName;
+        updateChildTitle();
+        loadDashboard();
+      }
+    });
+  }
+
+  await loadDashboard();
+}
+
+function updateChildTitle() {
+  const name = activeChildName;
+  document.getElementById('child-title').textContent     = `${name}s Lernfortschritt`;
+  document.getElementById('questions-title').textContent = `❓ ${name}s Fragen`;
+}
+
+/* ─── Link a child by email ─── */
+async function linkChild() {
+  const emailEl    = document.getElementById('link-child-email');
+  const nicknameEl = document.getElementById('link-child-nickname');
+  const btn        = document.getElementById('link-child-submit');
+  const status     = document.getElementById('link-child-status');
+
+  const email = emailEl.value.trim();
+  if (!email) { status.textContent = '⚠️ Bitte E-Mail eingeben.'; return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Verlinken…';
+  status.textContent = '';
+
+  try {
+    const res  = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:    'link-child',
+        parentId:  parentCtx.user.id,
+        childEmail: email,
+        nickname:  nicknameEl.value.trim() || null
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('Kind erfolgreich verlinkt! 🎉', 'success');
+      emailEl.value    = '';
+      nicknameEl.value = '';
+      document.getElementById('link-child-form').style.display = 'none';
+      await loadChildren();
+    } else {
+      status.textContent = '❌ ' + (data.error || 'Unbekannter Fehler');
+    }
+  } catch {
+    status.textContent = '❌ Verbindungsfehler';
+  }
+  btn.disabled    = false;
+  btn.textContent = 'Verlinken';
+}
+
+async function loadDashboard() {
+  const { sb } = parentCtx;
+  if (!activeChildId) { showEmptyState(); return; }
+
+  const since = activeDays > 0
     ? new Date(Date.now() - activeDays * 86400000).toISOString()
     : new Date(0).toISOString();
 
   await Promise.all([
-    loadSummaryStats(sb, lennyId, since),
-    loadActivities(sb, lennyId, since),
-    loadQuestions(sb, lennyId, since),
-    loadSubjectProgress(sb, lennyId),
-    loadStreak(sb, lennyId),
-    loadChallengeReviews(sb, lennyId),
-    loadSurpriseAlert(sb, lennyId)
+    loadSummaryStats(sb, activeChildId, since),
+    loadActivities(sb, activeChildId, since),
+    loadQuestions(sb, activeChildId, since),
+    loadSubjectProgress(sb, activeChildId),
+    loadStreak(sb, activeChildId),
+    loadChallengeReviews(sb, activeChildId),
+    loadSurpriseAlert(sb, activeChildId)
   ]);
 }
 

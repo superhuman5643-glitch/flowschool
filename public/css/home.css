@@ -609,6 +609,8 @@ details[open] .xp-info-accordion__toggle::after { transform: rotate(180deg); }
   border-radius: var(--radius);
   padding: 36px 32px;
   width: 100%; max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 24px 80px rgba(0,0,0,.6);
 }
 .onboarding-step { display: none; animation: fadeUp .3s ease; }

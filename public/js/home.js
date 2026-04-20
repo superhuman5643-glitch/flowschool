@@ -35,8 +35,7 @@ async function initHome() {
   const { data: profile } = await sb.from('child_profiles').select('interests').eq('user_id', user.id).maybeSingle();
   const needsOnboarding = !localStorage.getItem('fs_onboarding_v2') && (!profile?.interests?.length);
   if (needsOnboarding) {
-    document.getElementById('ob-name').textContent = name;
-    showOnboarding(sb, user.id);
+    showOnboarding(sb, user.id, name);
     hideLoader();
     return;
   }
@@ -796,14 +795,25 @@ function setupAvatarUpload(sb, userId, avatarEl) {
 }
 
 /* ─── Onboarding ─── */
-function showOnboarding(sb, userId) {
+function showOnboarding(sb, userId, userName) {
   const overlay = document.getElementById('onboarding-overlay');
   overlay.classList.remove('hidden');
 
-  let currentStep = 1;
-  const answers = { interests: [], learningStyle: '', strong: '', weak: '', business: '', goal: '' };
+  // Set name in both step 1 and final step
+  const nameEl = document.getElementById('ob-name');
+  const doneNameEl = document.getElementById('ob-done-name');
+  if (nameEl)     nameEl.textContent     = userName || 'du';
+  if (doneNameEl) doneNameEl.textContent = userName || 'du';
 
-  // Tag buttons (multi-select)
+  let currentStep = 1;
+  const answers = {
+    age: '', schoolClass: '', favSubject: '', hardSubject: '',
+    interests: [], learningStyle: '', commStyle: '',
+    motivations: [], business: '', goal: '',
+    strong: '', weak: '', concentration: ''
+  };
+
+  // Multi-select: interests
   document.querySelectorAll('#tags-interests .tag-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       btn.classList.toggle('selected');
@@ -813,7 +823,17 @@ function showOnboarding(sb, userId) {
     });
   });
 
-  // Tag buttons (single-select)
+  // Multi-select: motivations
+  document.querySelectorAll('#tags-motivation .tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('selected');
+      const val = btn.dataset.val;
+      if (btn.classList.contains('selected')) answers.motivations.push(val);
+      else answers.motivations = answers.motivations.filter(v => v !== val);
+    });
+  });
+
+  // Single-select: learning style
   document.querySelectorAll('#tags-style .tag-btn--single').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#tags-style .tag-btn--single').forEach(b => b.classList.remove('selected'));
@@ -822,26 +842,58 @@ function showOnboarding(sb, userId) {
     });
   });
 
-  // Next buttons
-  document.querySelectorAll('.onboarding-next').forEach(btn => {
-    btn.addEventListener('click', () => goToStep(currentStep + 1));
+  // Single-select: communication style
+  document.querySelectorAll('#tags-comm .tag-btn--single').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tags-comm .tag-btn--single').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      answers.commStyle = btn.dataset.val;
+    });
   });
 
-  // Finish button
-  document.getElementById('ob-finish').addEventListener('click', async () => {
-    answers.strong   = document.getElementById('ob-strong').value.trim();
-    answers.weak     = document.getElementById('ob-weak').value.trim();
-    answers.business = document.getElementById('ob-business').value.trim();
-    answers.goal     = document.getElementById('ob-goal').value.trim();
+  // Single-select: concentration span
+  document.querySelectorAll('#tags-concentration .tag-btn--single').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tags-concentration .tag-btn--single').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      answers.concentration = btn.dataset.val;
+    });
+  });
 
-    // Show summary
+  // Next buttons — collect step-2 fields before leaving
+  document.querySelectorAll('.onboarding-next').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (currentStep === 2) {
+        answers.age         = (document.getElementById('ob-age')?.value || '').trim();
+        answers.schoolClass = document.getElementById('ob-class')?.value || '';
+        answers.favSubject  = (document.getElementById('ob-fav-subject')?.value || '').trim();
+        answers.hardSubject = (document.getElementById('ob-hard-subject')?.value || '').trim();
+      }
+      goToStep(currentStep + 1);
+    });
+  });
+
+  // Finish button (step 5 → step 6 summary)
+  document.getElementById('ob-finish').addEventListener('click', async () => {
+    answers.strong   = (document.getElementById('ob-strong')?.value   || '').trim();
+    answers.weak     = (document.getElementById('ob-weak')?.value     || '').trim();
+    answers.business = (document.getElementById('ob-business')?.value || '').trim();
+    answers.goal     = (document.getElementById('ob-goal')?.value     || '').trim();
+
+    // Calculate vocab level from class
+    const cls = parseInt(answers.schoolClass, 10) || 6;
+    const vocabLevel = cls <= 4 ? 1 : cls <= 7 ? 2 : 3;
+
+    // Build summary for display
     const parts = [];
-    if (answers.interests.length) parts.push(`🎯 Interessen: ${answers.interests.join(', ')}`);
-    if (answers.strong)           parts.push(`💪 Stärken: ${answers.strong}`);
-    if (answers.weak)             parts.push(`📈 Wir arbeiten dran: ${answers.weak}`);
-    if (answers.learningStyle)    parts.push(`📚 Lernstil: ${answers.learningStyle}`);
-    if (answers.business)         parts.push(`🏪 Business-Traum: ${answers.business}`);
-    if (answers.goal)             parts.push(`🚀 Ziel: ${answers.goal}`);
+    if (answers.age)                parts.push(`👤 Alter: ${answers.age} Jahre`);
+    if (answers.schoolClass)        parts.push(`🏫 Klasse ${answers.schoolClass}`);
+    if (answers.favSubject)         parts.push(`💪 Lieblingsfach: ${answers.favSubject}`);
+    if (answers.interests.length)   parts.push(`🎯 Interessen: ${answers.interests.join(', ')}`);
+    if (answers.commStyle)          parts.push(`💬 Ansprache: ${answers.commStyle}`);
+    if (answers.motivations.length) parts.push(`🚀 Ziele: ${answers.motivations.join(', ')}`);
+    if (answers.strong)             parts.push(`⭐ Stärken: ${answers.strong}`);
+    if (answers.concentration)      parts.push(`⏱️ Konzentration: ${answers.concentration} Min`);
     document.getElementById('ob-summary').innerHTML = parts.join('<br>');
 
     // Save to DB
@@ -856,8 +908,16 @@ function showOnboarding(sb, userId) {
           strongTopics:  answers.strong,
           weakTopics:    answers.weak,
           learningStyle: answers.learningStyle,
+          commStyle:     answers.commStyle,
           businessDream: answers.business,
-          goal:          answers.goal
+          goal:          answers.goal,
+          age:           answers.age,
+          schoolClass:   answers.schoolClass,
+          favSubject:    answers.favSubject,
+          hardSubject:   answers.hardSubject,
+          motivations:   answers.motivations,
+          concentration: answers.concentration,
+          vocabLevel,
         })
       });
     } catch {}

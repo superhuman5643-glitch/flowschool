@@ -163,18 +163,56 @@
       <!-- Step 1: Willkommen -->
       <div class="onboarding-step active" data-step="1">
         <div class="onboarding-emoji">👋</div>
-        <h2 class="onboarding-title">Hey Lenny!</h2>
-        <p class="onboarding-sub">Bevor wir loslegen — ich möchte dich ein bisschen kennenlernen, damit ich dir die besten Lektionen bauen kann!</p>
-        <p class="onboarding-sub" style="margin-top:8px">Das dauert nur 2 Minuten 🚀</p>
+        <h2 class="onboarding-title">Hey, <span id="ob-name">du</span>!</h2>
+        <p class="onboarding-sub">Ich lerne dich jetzt kennen — damit deine Lektionen genau zu dir passen und wirklich Spaß machen!</p>
+        <p class="onboarding-sub" style="margin-top:8px">Dauert ca. 3 Minuten 🚀</p>
         <button class="btn btn-primary onboarding-next" style="margin-top:24px">Los geht's! →</button>
       </div>
 
-      <!-- Step 2: Interessen -->
+      <!-- Step 2: Block 1 — Wer bist du? -->
       <div class="onboarding-step" data-step="2">
         <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:20%"></div></div>
-        <div class="onboarding-emoji">🎯</div>
-        <h2 class="onboarding-title">Was interessiert dich?</h2>
-        <p class="onboarding-sub">Wähle alles aus, was dir gefällt:</p>
+        <div class="onboarding-emoji">🧑‍🎓</div>
+        <h2 class="onboarding-title">Block 1 — Wer bist du?</h2>
+        <div class="onboarding-field">
+          <label class="onboarding-label">Wie alt bist du?</label>
+          <input class="input" type="number" id="ob-age" min="6" max="20" placeholder="z.B. 12" style="max-width:120px" />
+        </div>
+        <div class="onboarding-field" style="margin-top:14px">
+          <label class="onboarding-label">In welche Klasse gehst du?</label>
+          <select class="input" id="ob-class" style="max-width:200px">
+            <option value="">Klasse wählen…</option>
+            <option value="1">Klasse 1</option>
+            <option value="2">Klasse 2</option>
+            <option value="3">Klasse 3</option>
+            <option value="4">Klasse 4</option>
+            <option value="5">Klasse 5</option>
+            <option value="6">Klasse 6</option>
+            <option value="7">Klasse 7</option>
+            <option value="8">Klasse 8</option>
+            <option value="9">Klasse 9</option>
+            <option value="10">Klasse 10</option>
+            <option value="11">Klasse 11</option>
+            <option value="12">Klasse 12</option>
+          </select>
+        </div>
+        <div class="onboarding-field" style="margin-top:14px">
+          <label class="onboarding-label">Was ist dein Lieblingsfach? 💪</label>
+          <input class="input" id="ob-fav-subject" placeholder="z.B. Mathe, Sport, Kunst…" />
+        </div>
+        <div class="onboarding-field" style="margin-top:14px">
+          <label class="onboarding-label">Was fällt dir in der Schule am schwersten? 😬</label>
+          <input class="input" id="ob-hard-subject" placeholder="z.B. Deutsch, Geschichte…" />
+        </div>
+        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
+      </div>
+
+      <!-- Step 3: Block 2 — Was liebst du? -->
+      <div class="onboarding-step" data-step="3">
+        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:40%"></div></div>
+        <div class="onboarding-emoji">❤️</div>
+        <h2 class="onboarding-title">Block 2 — Was liebst du?</h2>
+        <p class="onboarding-sub">Deine Interessen (mehrere wählbar):</p>
         <div class="onboarding-tags" id="tags-interests">
           <button class="tag-btn" data-val="Fußball">⚽ Fußball</button>
           <button class="tag-btn" data-val="Gaming">🎮 Gaming</button>
@@ -188,60 +226,80 @@
           <button class="tag-btn" data-val="Filme & Serien">🎬 Filme & Serien</button>
           <button class="tag-btn" data-val="Sport">🏋️ Sport</button>
           <button class="tag-btn" data-val="Lego & Bauen">🧱 Lego & Bauen</button>
+          <button class="tag-btn" data-val="YouTube">📺 YouTube</button>
+          <button class="tag-btn" data-val="Reisen">✈️ Reisen</button>
+        </div>
+        <p class="onboarding-sub" style="margin-top:16px">Wie lernst du am liebsten?</p>
+        <div class="onboarding-tags" id="tags-style">
+          <button class="tag-btn tag-btn--single" data-val="Lesen & Texte">📖 Lesen</button>
+          <button class="tag-btn tag-btn--single" data-val="Videos schauen">🎬 Videos</button>
+          <button class="tag-btn tag-btn--single" data-val="Ausprobieren">🔧 Ausprobieren</button>
+          <button class="tag-btn tag-btn--single" data-val="Mit Beispielen">🌍 Mit Beispielen</button>
+        </div>
+        <p class="onboarding-sub" style="margin-top:16px">Wie soll ich mit dir sprechen?</p>
+        <div class="onboarding-tags" id="tags-comm">
+          <button class="tag-btn tag-btn--single" data-val="Freund">🤙 Wie ein Freund</button>
+          <button class="tag-btn tag-btn--single" data-val="Lehrer">👨‍🏫 Wie ein Lehrer</button>
+          <button class="tag-btn tag-btn--single" data-val="Klar & kurz">⚡ Klar & kurz</button>
         </div>
         <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
       </div>
 
-      <!-- Step 3: Schule -->
-      <div class="onboarding-step" data-step="3">
-        <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:40%"></div></div>
-        <div class="onboarding-emoji">🏫</div>
-        <h2 class="onboarding-title">Und in der Schule?</h2>
-        <div class="onboarding-field">
-          <label class="onboarding-label">Was fällt dir leicht? 💪</label>
-          <input class="input" id="ob-strong" placeholder="z.B. Mathe, Sport, Deutsch…" />
-        </div>
-        <div class="onboarding-field" style="margin-top:16px">
-          <label class="onboarding-label">Was fällt dir schwer? 😬</label>
-          <input class="input" id="ob-weak" placeholder="z.B. Rechtschreibung, Geschichte…" />
-        </div>
-        <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
-      </div>
-
-      <!-- Step 4: Lernstil -->
+      <!-- Step 4: Block 3 — Deine Ziele -->
       <div class="onboarding-step" data-step="4">
         <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:60%"></div></div>
-        <div class="onboarding-emoji">📚</div>
-        <h2 class="onboarding-title">Wie lernst du am liebsten?</h2>
-        <div class="onboarding-tags" id="tags-style">
-          <button class="tag-btn tag-btn--single" data-val="Lesen & Texte">📖 Lesen & Texte</button>
-          <button class="tag-btn tag-btn--single" data-val="Videos schauen">🎬 Videos schauen</button>
-          <button class="tag-btn tag-btn--single" data-val="Ausprobieren">🔧 Ausprobieren</button>
-          <button class="tag-btn tag-btn--single" data-val="Mit Beispielen aus dem Alltag">🌍 Mit Beispielen</button>
+        <div class="onboarding-emoji">🚀</div>
+        <h2 class="onboarding-title">Block 3 — Deine Ziele</h2>
+        <p class="onboarding-sub">Warum bist du hier? (mehrere wählbar)</p>
+        <div class="onboarding-tags" id="tags-motivation">
+          <button class="tag-btn" data-val="Schulnoten verbessern">📊 Noten verbessern</button>
+          <button class="tag-btn" data-val="Geld verdienen lernen">💰 Geld verdienen</button>
+          <button class="tag-btn" data-val="Eigenes Business starten">🏪 Eigenes Business</button>
+          <button class="tag-btn" data-val="Neues entdecken">🔭 Neues entdecken</button>
+          <button class="tag-btn" data-val="Einfach Spaß haben">😄 Einfach Spaß</button>
+          <button class="tag-btn" data-val="Schlauer werden">🧠 Schlauer werden</button>
+        </div>
+        <div class="onboarding-field" style="margin-top:16px">
+          <label class="onboarding-label">Hast du eine Business-Idee? (kein Muss!) 🏪</label>
+          <input class="input" id="ob-business" placeholder="z.B. YouTube-Kanal, App bauen, Rasenmähen…" />
+        </div>
+        <div class="onboarding-field" style="margin-top:14px">
+          <label class="onboarding-label">Was willst du in 3 Monaten erreicht haben? 🎯</label>
+          <input class="input" id="ob-goal" placeholder="z.B. Mathe-Note verbessern, 100€ sparen…" />
         </div>
         <button class="btn btn-primary onboarding-next" style="margin-top:24px">Weiter →</button>
       </div>
 
-      <!-- Step 5: Business-Traum -->
+      <!-- Step 5: Block 4 — Dein Typ -->
       <div class="onboarding-step" data-step="5">
         <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:80%"></div></div>
-        <div class="onboarding-emoji">🏪</div>
-        <h2 class="onboarding-title">Dein Business-Traum</h2>
-        <p class="onboarding-sub">Hast du schon eine Idee, womit du Geld verdienen könntest? (Kein Muss!)</p>
-        <input class="input" id="ob-business" placeholder="z.B. Lemonade-Stand, YouTube-Kanal, Rasenmähen…" style="margin-top:16px" />
-        <div class="onboarding-field" style="margin-top:20px">
-          <label class="onboarding-label">Was willst du mit FlowSchool erreichen? 🚀</label>
-          <input class="input" id="ob-goal" placeholder="z.B. Geld sparen lernen, eigenes Business aufbauen…" />
+        <div class="onboarding-emoji">🦁</div>
+        <h2 class="onboarding-title">Block 4 — Dein Typ</h2>
+        <div class="onboarding-field">
+          <label class="onboarding-label">Was kannst du besonders gut? ⭐</label>
+          <input class="input" id="ob-strong" placeholder="z.B. Ich erkläre gut, bin kreativ, lerne schnell…" />
         </div>
-        <button class="btn btn-primary" id="ob-finish" style="margin-top:24px">Fertig! Los geht's 🚀</button>
+        <div class="onboarding-field" style="margin-top:14px">
+          <label class="onboarding-label">Wo willst du besser werden? 📈</label>
+          <input class="input" id="ob-weak" placeholder="z.B. Konzentration, Rechnen, Geduld…" />
+        </div>
+        <div style="margin-top:16px">
+          <label class="onboarding-label">Wie lange kannst du dich gut konzentrieren?</label>
+          <div class="onboarding-tags" id="tags-concentration" style="margin-top:8px">
+            <button class="tag-btn tag-btn--single" data-val="10">⚡ 10 Minuten</button>
+            <button class="tag-btn tag-btn--single" data-val="20">🎯 20 Minuten</button>
+            <button class="tag-btn tag-btn--single" data-val="30">🏆 30+ Minuten</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="ob-finish" style="margin-top:24px">Fast fertig! →</button>
       </div>
 
       <!-- Step 6: Fertig -->
       <div class="onboarding-step" data-step="6">
         <div class="onboarding-progress"><div class="onboarding-progress__fill" style="width:100%"></div></div>
         <div class="onboarding-emoji">🎉</div>
-        <h2 class="onboarding-title">Perfekt, <span id="ob-name">Lenny</span>!</h2>
-        <p class="onboarding-sub">Ich habe mir alles gemerkt. Deine Lektionen werden jetzt auf dich zugeschnitten!</p>
+        <h2 class="onboarding-title">Perfekt, <span id="ob-done-name">du</span>!</h2>
+        <p class="onboarding-sub">Ich habe alles gespeichert — deine Lektionen werden jetzt genau auf dich zugeschnitten!</p>
         <div class="onboarding-summary" id="ob-summary"></div>
         <button class="btn btn-primary" id="ob-done" style="margin-top:24px">FlowSchool starten! 🚀</button>
       </div>
