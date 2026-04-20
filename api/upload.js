@@ -30,10 +30,8 @@ export default async function handler(req, res) {
       const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
       const url = urlData.publicUrl + '?t=' + Date.now();
 
-      await sb.from('child_profiles').upsert(
-        { user_id: userId, avatar_url: url },
-        { onConflict: 'user_id' }
-      );
+      // Save to user metadata (no extra DB column needed)
+      await sb.auth.admin.updateUserById(userId, { user_metadata: { avatar_url: url } });
 
       return res.json({ url });
     } catch (err) {

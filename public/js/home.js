@@ -744,8 +744,9 @@ document.getElementById('back-to-home').addEventListener('click', () => {
 /* ─── Avatar ─── */
 async function loadAvatar(sb, userId, avatarEl) {
   try {
-    const { data } = await sb.from('child_profiles').select('avatar_url').eq('user_id', userId).maybeSingle();
-    if (data?.avatar_url) setAvatarImage(avatarEl, data.avatar_url);
+    const { data: { user } } = await sb.auth.getUser();
+    const url = user?.user_metadata?.avatar_url;
+    if (url) setAvatarImage(avatarEl, url);
   } catch {}
 }
 
