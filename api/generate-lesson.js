@@ -19,7 +19,10 @@ export default async function handler(req, res) {
         .eq('id', lessonId)
         .single();
 
-      if (cached?.generated_at && cached?.content) {
+      // Only use cache if it was personalized for this user (name check)
+      const cachedForThisUser = !cached?.content || childName === 'du' ||
+        cached.content.toLowerCase().includes(childName.toLowerCase());
+      if (cached?.generated_at && cached?.content && cachedForThisUser) {
         // Extract embedded mcQuestions from last element if present
         const allQ = cached.quiz_questions || [];
         const last = allQ[allQ.length - 1];
@@ -36,6 +39,15 @@ export default async function handler(req, res) {
           videoSearchTerm: cached.video_search_term || ''
         });
       }
+    } catch {}
+  }
+
+  // Fetch child's name dynamically
+  let childName = 'du';
+  if (userId) {
+    try {
+      const { data: { user } } = await sb.auth.admin.getUserById(userId);
+      childName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'du';
     } catch {}
   }
 
@@ -57,7 +69,7 @@ export default async function handler(req, res) {
       if (profile.learning_notes)             parts.push(`Notizen: ${profile.learning_notes}`);
       const vocab = profile.vocab_level === 3 ? 'fortgeschritten' : profile.vocab_level === 2 ? 'mittel' : 'einfach';
       parts.push(`Vokabular-Level: ${vocab}`);
-      if (parts.length) profileCtx = `\n\nLennys Lernprofil:\n${parts.join('\n')}`;
+      if (parts.length) profileCtx = `\n\nLernprofil von ${childName}:\n${parts.join('\n')}`;
     }
   }
 
@@ -69,7 +81,7 @@ export default async function handler(req, res) {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 2048,
-      system: `Du bist ein begeisterter Lehrerkollege für einen Schüler namens Lenny.
+      system: `Du bist ein begeisterter Lehrerkollege für einen Schüler namens ${childName}.
 Dein Standard-Ton: locker, freundlich, wie ein cooler älterer Freund — keine trockene Schulsprache.
 Erkläre alles auf Deutsch mit vielen Alltagsbeispielen aus der Welt des Schülers (Gaming, Sport, YouTube, Freunde usw.).
 Nutze HTML-Tags für Formatierung: <h2>, <p>, <ul><li>, <strong>, <em>.
