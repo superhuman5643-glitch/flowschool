@@ -111,7 +111,15 @@ async function initLogin() {
 async function redirectByRole(sb) {
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return;
-  const { data: profile } = await sb.from('users').select('role').eq('id', user.id).single();
+  const { data: profile, error } = await sb.from('users').select('role').eq('id', user.id).maybeSingle();
+  if (!profile) {
+    // Profile not ready yet (e.g. server insert in progress) — retry once after short delay
+    await new Promise(r => setTimeout(r, 800));
+    const { data: profile2 } = await sb.from('users').select('role').eq('id', user.id).maybeSingle();
+    const role2 = profile2?.role || 'lenny';
+    window.location.href = role2 === 'parent' ? '/parent' : '/home';
+    return;
+  }
   const role = profile?.role || 'lenny';
   window.location.href = role === 'parent' ? '/parent' : '/home';
 }
@@ -150,7 +158,12 @@ async function requireAuth(requiredRole) {
   if (!session) { window.location.href = '/'; return null; }
 
   const { data: profile } = await sb.from('users').select('*').eq('id', session.user.id).single();
-  if (!profile) { window.location.href = '/'; return null; }
+  if (!profile) {
+    // No profile = broken account state → sign out to prevent redirect loop
+    await sb.auth.signOut();
+    window.location.replace('/');
+    return null;
+  }
 
   if (requiredRole && profile.role !== requiredRole) {
     window.location.href = profile.role === 'parent' ? '/parent' : '/home';
