@@ -59,33 +59,39 @@ async function loadDashboard() {
 
 /* ─── Summary stats ─── */
 async function loadSummaryStats(sb, lennyId, since) {
-  const [progressRes, sessionRes] = await Promise.all([
-    sb.from('progress')
-      .select('lesson_id, completed, time_spent_seconds, completed_at')
-      .eq('user_id', lennyId)
-      .or(`completed_at.gte.${since},completed_at.is.null`)
-      .eq('completed', true),
-    sb.from('sessions')
-      .select('breaks_taken, start_time')
-      .eq('user_id', lennyId)
-      .gte('start_time', since)
-  ]);
+  try {
+    const [progressRes, sessionRes] = await Promise.all([
+      sb.from('progress')
+        .select('lesson_id, completed, time_spent_seconds, completed_at')
+        .eq('user_id', lennyId)
+        .eq('completed', true),
+      sb.from('sessions')
+        .select('breaks_taken, start_time')
+        .eq('user_id', lennyId)
+    ]);
 
-  const progress  = progressRes.data || [];
-  const sessions  = sessionRes.data  || [];
+    // Filter by date in JS to avoid Supabase filter syntax issues
+    const allProgress = progressRes.data || [];
+    const allSessions = sessionRes.data  || [];
 
-  const lessons   = progress.length;
-  const totalSecs = progress.reduce((s, p) => s + (p.time_spent_seconds || 0), 0);
-  const hours     = totalSecs >= 3600
-    ? (totalSecs / 3600).toFixed(1) + 'h'
-    : Math.round(totalSecs / 60) + 'min';
-  const breaks    = sessions.reduce((s, s2) => s + (s2.breaks_taken || 0), 0);
-  const xp        = lessons * 100;
+    const progress = allProgress.filter(p => !since || !p.completed_at || p.completed_at >= since);
+    const sessions = allSessions.filter(s => !since || !s.start_time   || s.start_time   >= since);
 
-  document.getElementById('stat-lessons').textContent  = lessons;
-  document.getElementById('stat-time').textContent     = hours;
-  document.getElementById('stat-xp').textContent       = xp;
-  document.getElementById('stat-breaks').textContent   = breaks;
+    const lessons   = progress.length;
+    const totalSecs = progress.reduce((s, p) => s + (p.time_spent_seconds || 0), 0);
+    const hours     = totalSecs >= 3600
+      ? (totalSecs / 3600).toFixed(1) + 'h'
+      : Math.round(totalSecs / 60) + 'min';
+    const breaks    = sessions.reduce((s, s2) => s + (s2.breaks_taken || 0), 0);
+    const xp        = lessons * 100;
+
+    document.getElementById('stat-lessons').textContent  = lessons;
+    document.getElementById('stat-time').textContent     = hours;
+    document.getElementById('stat-xp').textContent       = xp;
+    document.getElementById('stat-breaks').textContent   = breaks;
+  } catch (err) {
+    console.error('loadSummaryStats error:', err);
+  }
 }
 
 /* ─── Activity feed ─── */
