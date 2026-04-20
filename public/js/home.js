@@ -509,17 +509,23 @@ async function showLessons(sb, userId, subject) {
   });
 
   let previousDone = true; // first lesson always unlocked
+  let challengePending = false; // tracks if previous level's challenge is blocking next level
 
   Object.entries(grouped).forEach(([lvl, lvlLessons]) => {
+    // Level header — show lock if previous challenge not yet approved
     const levelHeader = document.createElement('div');
     levelHeader.className = 'lesson-level-header';
-    levelHeader.textContent = `Level ${lvl}`;
+    if (challengePending) {
+      levelHeader.innerHTML = `🔒 Level ${lvl} <span style="font-size:.75rem;color:var(--muted);font-weight:400;margin-left:6px">— Praktische Übung erforderlich</span>`;
+    } else {
+      levelHeader.textContent = `Level ${lvl}`;
+    }
     list.appendChild(levelHeader);
 
     lvlLessons.forEach((lesson, i) => {
       const prog   = progressMap[lesson.id];
       const done   = prog?.completed || false;
-      const locked = !previousDone;
+      const locked = !previousDone || challengePending;
       const num    = (parseInt(lvl) - 1) * 5 + i + 1;
 
       const item = document.createElement('div');
@@ -534,7 +540,10 @@ async function showLessons(sb, userId, subject) {
       `;
 
       if (locked) {
-        item.addEventListener('click', () => showToast('Schließe erst die vorherige Lektion ab! 🔒', 'error'));
+        const msg = challengePending
+          ? 'Erst die Praktische Übung einreichen — dann wird das nächste Level freigeschaltet! 🎯'
+          : 'Schließe erst die vorherige Lektion ab! 🔒';
+        item.addEventListener('click', () => showToast(msg, 'error'));
       } else {
         item.addEventListener('click', () => {
           const params = new URLSearchParams({
@@ -546,12 +555,13 @@ async function showLessons(sb, userId, subject) {
       }
 
       list.appendChild(item);
-      previousDone = done;
+      previousDone = done && !challengePending;
     });
 
     // After all 5 lessons: add challenge as 6th item if level is complete
     const allDone = lvlLessons.every(l => progressMap[l.id]?.completed);
     const challenge = challengeByLevel[parseInt(lvl)];
+
     if (allDone && challenge) {
       const sub = submissionByChallengeId[challenge.id];
       const challengeItem = document.createElement('div');
@@ -564,7 +574,7 @@ async function showLessons(sb, userId, subject) {
         statusMeta = `Bestätigt · +${sub.xp_awarded || 250} XP`;
       } else if (sub?.status === 'pending') {
         statusIcon = '⏳';
-        statusMeta = 'Eingereicht · wartet auf Eltern';
+        statusMeta = 'Eingereicht · wartet auf Eltern-Bestätigung';
       } else {
         statusIcon = '🎯';
         statusMeta = '250 XP · Praktische Übung';
@@ -576,13 +586,21 @@ async function showLessons(sb, userId, subject) {
           <div class="lesson-item__title">${challenge.title}</div>
           <div class="lesson-item__meta">${statusMeta}</div>
         </div>
-        <div style="color:var(--purple);font-size:.8rem;font-weight:600;white-space:nowrap">Level ${lvl} Challenge</div>
+        <div style="color:var(--purple);font-size:.8rem;font-weight:600;white-space:nowrap;padding-left:8px">Level ${lvl} Challenge</div>
       `;
 
       if (sub?.status !== 'approved') {
         challengeItem.addEventListener('click', () => showChallengeModal(challenge, sub, userId, sb, subject));
       }
       list.appendChild(challengeItem);
+
+      // Lock next level until challenge is approved
+      challengePending = sub?.status !== 'approved';
+      if (challengePending) previousDone = false;
+
+    } else if (allDone && !challenge) {
+      // No challenge yet — don't block (will be created on next level-up call)
+      challengePending = false;
     }
   });
 }
