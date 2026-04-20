@@ -463,8 +463,17 @@ function updateVideoProgress(playerArg) {
       pct < 95 ? `Schau das gesamte Video — noch ca. ${remaining} Min` : '✅ Video vollständig geschaut!';
   }
 
-  if (pct >= 95 && !state.videoDone) {
+  if (pct >= 90 && !state.videoDone) {
     state.videoDone = true;
+    if (state.ytCheckInterval) { clearInterval(state.ytCheckInterval); state.ytCheckInterval = null; }
+    // Replace player immediately at 90% to prevent YouTube end-screen suggestions
+    const wrapper = document.getElementById('video-wrapper');
+    if (wrapper) wrapper.innerHTML = `
+      <div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:var(--radius)">
+        <div style="font-size:3rem">✅</div>
+        <div style="font-weight:700;font-size:1.1rem">Video geschaut!</div>
+        <div class="text-muted text-sm">Weiter zur Lernkontrolle</div>
+      </div>`;
     document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
     document.getElementById('video-hint').style.color = 'var(--green)';
     checkContinueUnlock();
@@ -491,7 +500,7 @@ function unlockQuiz() {
 
   document.getElementById('quiz-section').classList.remove('hidden');
   document.getElementById('continue-btn').disabled = true;
-  document.getElementById('footer-info').textContent = 'Beantworte die Fragen mit eigenen Worten (min. 25 Wörter)';
+  document.getElementById('footer-info').textContent = 'Beantworte die Fragen mit eigenen Worten (min. 15 Wörter)';
 
   const container = document.getElementById('quiz-questions');
   container.innerHTML = '';
@@ -503,7 +512,7 @@ function unlockQuiz() {
     div.innerHTML = `
       <div class="quiz-question__text">${i + 1}. ${q}</div>
       <div class="quiz-question__input" style="display:flex;gap:8px;align-items:flex-start">
-        <textarea placeholder="Erkläre mit eigenen Worten — mindestens 25 Wörter…" id="quiz-answer-${i}" rows="4" style="flex:1"></textarea>
+        <textarea placeholder="Erkläre mit eigenen Worten — mindestens 15 Wörter…" id="quiz-answer-${i}" rows="4" style="flex:1"></textarea>
         <button class="btn btn-secondary btn-sm" id="mic-btn-${i}" title="Spracheingabe starten/stoppen" style="padding:8px;font-size:1.1rem;flex-shrink:0">🎤</button>
       </div>
       <div class="quiz-word-count text-muted text-sm" id="quiz-wc-${i}">0 Wörter</div>
@@ -513,8 +522,8 @@ function unlockQuiz() {
     document.getElementById(`quiz-answer-${i}`).addEventListener('input', () => {
       const wc = countWords(document.getElementById(`quiz-answer-${i}`).value);
       const el = document.getElementById(`quiz-wc-${i}`);
-      el.textContent = `${wc} Wörter ${wc >= 25 ? '✅' : '(min. 25)'}`;
-      el.style.color = wc >= 25 ? 'var(--green)' : '';
+      el.textContent = `${wc} Wörter ${wc >= 15 ? '✅' : '(min. 25)'}`;
+      el.style.color = wc >= 15 ? 'var(--green)' : '';
     });
     document.getElementById(`mic-btn-${i}`).addEventListener('click', () => startVoiceInput(i));
   });
@@ -615,8 +624,8 @@ async function submitQuiz() {
     }
 
     const wc = countWords(answer);
-    if (wc < 25) {
-      feedback.textContent = `Zu kurz! Du hast nur ${wc} Wörter — bitte mindestens 25 Wörter in eigenen Worten schreiben.`;
+    if (wc < 15) {
+      feedback.textContent = `Zu kurz! Du hast nur ${wc} Wörter — bitte mindestens 15 Wörter in eigenen Worten schreiben.`;
       feedback.className = 'quiz-feedback fail';
       feedback.classList.remove('hidden');
       allPassed = false;
