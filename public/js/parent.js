@@ -63,9 +63,10 @@ async function loadSummaryStats(sb, lennyId, since) {
     sb.from('progress')
       .select('lesson_id, completed, time_spent_seconds, completed_at')
       .eq('user_id', lennyId)
-      .gte('completed_at', since),
+      .or(`completed_at.gte.${since},completed_at.is.null`)
+      .eq('completed', true),
     sb.from('sessions')
-      .select('breaks_taken, active_minutes, start_time')
+      .select('breaks_taken, start_time')
       .eq('user_id', lennyId)
       .gte('start_time', since)
   ]);
@@ -73,9 +74,11 @@ async function loadSummaryStats(sb, lennyId, since) {
   const progress  = progressRes.data || [];
   const sessions  = sessionRes.data  || [];
 
-  const lessons   = progress.filter(p => p.completed).length;
+  const lessons   = progress.length;
   const totalSecs = progress.reduce((s, p) => s + (p.time_spent_seconds || 0), 0);
-  const hours     = (totalSecs / 3600).toFixed(1);
+  const hours     = totalSecs >= 3600
+    ? (totalSecs / 3600).toFixed(1) + 'h'
+    : Math.round(totalSecs / 60) + 'min';
   const breaks    = sessions.reduce((s, s2) => s + (s2.breaks_taken || 0), 0);
   const xp        = lessons * 100;
 

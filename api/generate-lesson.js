@@ -73,14 +73,18 @@ Wenn ein Lernprofil vorhanden ist: passe Beispiele, Analogien und Erklärungstie
 Antworte NUR mit validem JSON in exakt diesem Format:
 {
   "content": "<h2>...</h2><p>...</p>...",
-  "quizQuestions": ["Frage 1?", "Frage 2?", "Frage 3?"],
+  "quizQuestions": ["Offene Frage 1?", "Offene Frage 2?"],
+  "mcQuestions": [
+    {"question": "MC-Frage 1?", "options": ["A", "B", "C", "D"], "correct": 0},
+    {"question": "MC-Frage 2?", "options": ["A", "B", "C", "D"], "correct": 2}
+  ],
   "videoSearchTerm": "YouTube Suchbegriff auf Deutsch"
 }`,
       messages: [{
         role: 'user',
         content: `Erstelle eine Lektion zum Thema "${lessonTitle}" aus dem Fach "${subjectName}".
 Länge: ca. 350-500 Wörter. 2-3 Abschnitte mit Überschriften.
-Quiz: 2-3 offene Kurzfragen (kein Multiple Choice), die echtes Verständnis prüfen. Jede Frage maximal 20 Wörter.
+Quiz: 2 offene Kurzfragen (max. 20 Wörter je Frage) + 2 Multiple-Choice-Fragen mit je 4 Antwortoptionen (correct = Index 0-3 der richtigen Antwort).
 Video-Suchbegriff: passender YouTube-Begriff auf Deutsch für ein erklärendes Video.`
       }]
     });

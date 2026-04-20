@@ -19,6 +19,7 @@ let state = {
   chatHistory: [],
   lessonContent: '',
   quizQuestions: [],
+  mcQuestions: [],
   quizResults: [],
   quizAttempts: 0,
   breakWarnShown: false,
@@ -30,7 +31,9 @@ let state = {
   youtubePlayer: null,
   ytCheckInterval: null,
   seekLockUntil: null,
-  sessionId: null
+  sessionId: null,
+  currentRec: null,
+  currentRecIndex: null
 };
 
 async function initLesson() {
@@ -89,7 +92,8 @@ async function startSession() {
   if (existing) { state.sessionId = existing; return; }
 
   const { data } = await state.sb.from('sessions').insert({
-    user_id: state.user.id, breaks_taken: 0
+    user_id: state.user.id, breaks_taken: 0,
+    start_time: new Date().toISOString()
   }).select().single();
   if (data) {
     state.sessionId = data.id;
@@ -298,13 +302,14 @@ async function generateLesson() {
 
     state.lessonContent  = data.content || '';
     state.quizQuestions  = data.quizQuestions || [];
+    state.mcQuestions    = data.mcQuestions   || [];
 
     // Render content
     document.getElementById('lesson-content').innerHTML = state.lessonContent;
 
-    // Start read timer
+    // Start read timer — minimum 5 minutes, timer hidden
     const wordCount  = state.lessonContent.replace(/<[^>]+>/g,'').split(/\s+/).length;
-    const readSecs   = Math.max(30, Math.round((wordCount / WORDS_PER_MIN) * 60));
+    const readSecs   = Math.max(300, Math.round((wordCount / WORDS_PER_MIN) * 60));
     startReadTimer(readSecs);
 
     // Load video
@@ -321,27 +326,14 @@ async function generateLesson() {
 
 /* ─── Read timer ─── */
 function startReadTimer(seconds) {
-  let remaining = seconds;
-  updateTimerDisplay(remaining);
+  // Hide the countdown — just wait silently
+  const noticeEl = document.getElementById('timer-notice');
+  if (noticeEl) noticeEl.style.display = 'none';
 
-  const interval = setInterval(() => {
-    remaining--;
-    updateTimerDisplay(remaining);
-    if (remaining <= 0) {
-      clearInterval(interval);
-      state.readTimerDone = true;
-      document.getElementById('timer-notice').innerHTML =
-        '✅ Lesezeit abgeschlossen! Schau jetzt das Video.';
-      checkContinueUnlock();
-    }
-  }, 1000);
-}
-
-function updateTimerDisplay(s) {
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  const el = document.getElementById('timer-display');
-  if (el) el.textContent = `${m}:${sec.toString().padStart(2,'0')}`;
+  setTimeout(() => {
+    state.readTimerDone = true;
+    checkContinueUnlock();
+  }, seconds * 1000);
 }
 
 /* ─── YouTube video ─── */
@@ -422,6 +414,21 @@ function onYTStateChange(event) {
   if (event.data === 1 || event.data === 2) {
     updateVideoProgress(event.target);
   }
+  // Video ended (0) — replace player with done screen to hide YouTube suggestions
+  if (event.data === 0) {
+    if (state.ytCheckInterval) { clearInterval(state.ytCheckInterval); state.ytCheckInterval = null; }
+    const wrapper = document.getElementById('video-wrapper');
+    wrapper.innerHTML = `
+      <div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:var(--radius)">
+        <div style="font-size:3rem">✅</div>
+        <div style="font-weight:700;font-size:1.1rem">Video geschaut!</div>
+        <div class="text-muted text-sm">Weiter zur Lernkontrolle</div>
+      </div>`;
+    state.videoDone = true;
+    document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
+    document.getElementById('video-hint').style.color = 'var(--green)';
+    checkContinueUnlock();
+  }
 }
 
 function updateVideoProgress(playerArg) {
@@ -488,6 +495,8 @@ function unlockQuiz() {
 
   const container = document.getElementById('quiz-questions');
   container.innerHTML = '';
+
+  // Open questions
   state.quizQuestions.forEach((q, i) => {
     const div = document.createElement('div');
     div.className = 'quiz-question';
@@ -495,23 +504,38 @@ function unlockQuiz() {
       <div class="quiz-question__text">${i + 1}. ${q}</div>
       <div class="quiz-question__input" style="display:flex;gap:8px;align-items:flex-start">
         <textarea placeholder="Erkläre mit eigenen Worten — mindestens 25 Wörter…" id="quiz-answer-${i}" rows="4" style="flex:1"></textarea>
-        <button class="btn btn-secondary btn-sm" id="mic-btn-${i}" title="Spracheingabe" style="padding:8px;font-size:1.2rem;flex-shrink:0">🎤</button>
+        <button class="btn btn-secondary btn-sm" id="mic-btn-${i}" title="Spracheingabe starten/stoppen" style="padding:8px;font-size:1.1rem;flex-shrink:0">🎤</button>
       </div>
       <div class="quiz-word-count text-muted text-sm" id="quiz-wc-${i}">0 Wörter</div>
       <div class="quiz-feedback hidden" id="quiz-feedback-${i}"></div>
     `;
     container.appendChild(div);
-
-    // Wort-Zähler
     document.getElementById(`quiz-answer-${i}`).addEventListener('input', () => {
       const wc = countWords(document.getElementById(`quiz-answer-${i}`).value);
       const el = document.getElementById(`quiz-wc-${i}`);
       el.textContent = `${wc} Wörter ${wc >= 25 ? '✅' : '(min. 25)'}`;
       el.style.color = wc >= 25 ? 'var(--green)' : '';
     });
-
-    // Spracheingabe
     document.getElementById(`mic-btn-${i}`).addEventListener('click', () => startVoiceInput(i));
+  });
+
+  // Multiple-choice questions
+  const mcOffset = state.quizQuestions.length;
+  state.mcQuestions.forEach((mc, i) => {
+    const idx = mcOffset + i;
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    const opts = mc.options.map((opt, oi) => `
+      <label class="mc-option" id="mc-label-${idx}-${oi}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:8px;transition:.15s">
+        <input type="radio" name="mc-${idx}" value="${oi}" style="accent-color:var(--purple)">
+        <span>${opt}</span>
+      </label>`).join('');
+    div.innerHTML = `
+      <div class="quiz-question__text">${idx + 1}. ${mc.question}</div>
+      <div id="mc-opts-${idx}" style="margin-top:10px">${opts}</div>
+      <div class="quiz-feedback hidden" id="quiz-feedback-${idx}"></div>
+    `;
+    container.appendChild(div);
   });
 
   document.getElementById('quiz-submit').addEventListener('click', submitQuiz);
@@ -525,19 +549,47 @@ function countWords(text) {
 function startVoiceInput(index) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { showToast('Spracherkennung nicht unterstützt (Chrome empfohlen)', 'error'); return; }
+
+  const btn = document.getElementById(`mic-btn-${index}`);
+
+  // Toggle: if already recording for this index, stop
+  if (state.currentRec && state.currentRecIndex === index) {
+    state.currentRec.stop();
+    state.currentRec = null;
+    btn.textContent = '🎤';
+    return;
+  }
+  // Stop any other active recording
+  if (state.currentRec) { state.currentRec.stop(); state.currentRec = null; }
+
   const rec = new SR();
   rec.lang = 'de-DE';
+  rec.continuous = true;
   rec.interimResults = false;
-  const btn = document.getElementById(`mic-btn-${index}`);
-  btn.textContent = '🔴';
-  btn.disabled = true;
+  state.currentRec = rec;
+  state.currentRecIndex = index;
+
+  btn.textContent = '🔴 Stopp';
+  btn.style.background = 'rgba(255,50,50,.2)';
+
   rec.onresult = e => {
     const ta = document.getElementById(`quiz-answer-${index}`);
-    ta.value += (ta.value ? ' ' : '') + e.results[0][0].transcript;
-    ta.dispatchEvent(new Event('input'));
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        ta.value += (ta.value ? ' ' : '') + e.results[i][0].transcript;
+        ta.dispatchEvent(new Event('input'));
+      }
+    }
   };
-  rec.onerror = () => showToast('Spracherkennung fehlgeschlagen', 'error');
-  rec.onend = () => { btn.textContent = '🎤'; btn.disabled = false; };
+  rec.onerror = () => {
+    showToast('Spracherkennung fehlgeschlagen', 'error');
+    btn.textContent = '🎤'; btn.style.background = '';
+    state.currentRec = null;
+  };
+  rec.onend = () => {
+    btn.textContent = '🎤'; btn.style.background = '';
+    if (state.currentRec === rec) state.currentRec = null;
+  };
   rec.start();
 }
 
@@ -593,6 +645,28 @@ async function submitQuiz() {
       allPassed = false;
     }
   }
+
+  // Grade MC questions client-side
+  const mcOffset = state.quizQuestions.length;
+  state.mcQuestions.forEach((mc, i) => {
+    const idx      = mcOffset + i;
+    const selected = document.querySelector(`input[name="mc-${idx}"]:checked`);
+    const feedback = document.getElementById(`quiz-feedback-${idx}`);
+    if (!selected) {
+      feedback.textContent = 'Bitte wähle eine Antwort aus.';
+      feedback.className = 'quiz-feedback fail';
+      feedback.classList.remove('hidden');
+      allPassed = false;
+      return;
+    }
+    const correct = parseInt(selected.value) === mc.correct;
+    feedback.textContent = correct
+      ? `✅ Richtig! "${mc.options[mc.correct]}" ist korrekt.`
+      : `❌ Leider falsch. Die richtige Antwort war: "${mc.options[mc.correct]}"`;
+    feedback.className = `quiz-feedback ${correct ? 'pass' : 'fail'}`;
+    feedback.classList.remove('hidden');
+    if (!correct) allPassed = false;
+  });
 
   if (allPassed) {
     await completeLesson();
