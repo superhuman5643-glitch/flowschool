@@ -89,7 +89,12 @@ async function initLogin() {
     if (error) { showError(error.message); setLoading('register', false); return; }
 
     if (data.user) {
-      await sb.from('users').insert({ id: data.user.id, email, role: regRole }).catch(() => {});
+      // Use server-side API (service role) to avoid RLS issues
+      await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'register', userId: data.user.id, email, role: regRole })
+      }).catch(() => {});
     }
 
     setLoading('register', false);

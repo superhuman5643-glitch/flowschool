@@ -119,5 +119,20 @@ export default async function handler(req, res) {
     }
   }
 
+  // POST /api/onboarding { action: 'register', userId, email, role }
+  if (action === 'register') {
+    const { userId, email, role } = req.body;
+    if (!userId || !email) return res.status(400).json({ error: 'Missing fields' });
+    try {
+      await sb.from('users').upsert(
+        { id: userId, email, role: role || 'lenny' },
+        { onConflict: 'id' }
+      );
+      return res.json({ ok: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   res.status(400).json({ error: 'Unknown action' });
 }
