@@ -23,6 +23,8 @@ async function initHome() {
   const name = displayName.charAt(0).toUpperCase() + displayName.slice(1);
   document.getElementById('header-greeting').textContent = `Hey, ${name}! 👋`;
 
+  document.getElementById('logout-btn').addEventListener('click', () => logout());
+
   const avatarEl = document.getElementById('header-avatar');
   avatarEl.textContent = name.charAt(0).toUpperCase();
   avatarEl.addEventListener('click', () => document.getElementById('avatar-input').click());
