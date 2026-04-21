@@ -1,8 +1,8 @@
 /* ── FlowSchool — Lesson page ── */
 
 const WORDS_PER_MIN   = 200;
-const BREAK_WARN_MS   = 25 * 60 * 1000;  // 25 min
-const BREAK_FORCE_MS  = 27 * 60 * 1000;  // 27 min
+const BREAK_WARN_MS   = 1 * 60 * 1000;   // ⚠️ TEST: 1 Min (Normalwert: 25 * 60 * 1000)
+const BREAK_FORCE_MS  = 2 * 60 * 1000;   // ⚠️ TEST: 2 Min (Normalwert: 27 * 60 * 1000)
 const BREAK_DUR_S     = 5 * 60;          // 5 min pause
 const LS_ACTIVE_KEY   = 'fs_active_ms';
 const LS_SESSION_KEY  = 'fs_session_id';
@@ -262,6 +262,15 @@ function showCheckin() {
 }
 
 function setupCheckin() {
+  // Clear duplicate listeners from previous breaks by cloning nodes
+  document.querySelectorAll('.checkin-emojis button').forEach(btn => {
+    const fresh = btn.cloneNode(true);
+    btn.parentNode.replaceChild(fresh, btn);
+  });
+  const doneBtn = document.getElementById('checkin-done');
+  const freshDone = doneBtn.cloneNode(true);
+  doneBtn.parentNode.replaceChild(freshDone, doneBtn);
+
   document.querySelectorAll('.checkin-emojis button').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
@@ -318,15 +327,24 @@ function endBreak() {
   state.breakActive = false;
   localStorage.setItem(LS_ACTIVE_KEY, '0');
 
-  // Reset break screen
+  // Stop & destroy break player
+  try { state.breakPlayer?.stopVideo?.(); } catch {}
+  state.breakPlayer = null;
+
+  // Reset break screen fully
   document.getElementById('break-video-wrap').style.display = '';
   document.getElementById('break-video-status').style.display = '';
   document.getElementById('break-video-status').textContent = '⏳ Lade Bewegungsvideo…';
-  document.getElementById('break-video-container').innerHTML = '';
+  document.getElementById('break-video-container').innerHTML = '';   // removes overlay too
+  const bcc = document.getElementById('break-custom-controls');
+  if (bcc) bcc.style.display = 'none';
   document.getElementById('checkin-form').classList.add('hidden');
   document.getElementById('checkin-done').disabled = true;
   document.getElementById('extra-break').classList.add('hidden');
   document.getElementById('extra-break-countdown').classList.add('hidden');
+  document.getElementById('extra-break-yes').disabled = false;
+  document.getElementById('extra-break-no').disabled = false;
+  document.getElementById('extra-break-no').textContent = 'Nein, ich bin bereit! 💪';
   document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
   document.getElementById('break-screen').classList.add('hidden');
 
