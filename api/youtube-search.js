@@ -74,9 +74,13 @@ export default async function handler(req, res) {
     const items = data.items || [];
     if (items.length === 0) return res.json({ videoId: null });
 
-    // If preferred channels set, score results: preferred channel = +10 bonus
-    let best = items[0];
-    if (settings?.preferred_channels && !isBreak) {
+    let best;
+    if (isBreak) {
+      // Pick a random video from the results so every break feels different
+      best = items[Math.floor(Math.random() * items.length)];
+    } else if (settings?.preferred_channels) {
+      // If preferred channels set, score results: preferred channel = +10 bonus
+      best = items[0];
       const preferred = settings.preferred_channels.toLowerCase().split(',').map(c => c.trim());
       let bestScore = -1;
       for (const item of items) {
@@ -84,6 +88,8 @@ export default async function handler(req, res) {
         const score = preferred.some(p => channel.includes(p)) ? 10 : 0;
         if (score > bestScore) { bestScore = score; best = item; }
       }
+    } else {
+      best = items[0];
     }
 
     res.json({ videoId: best?.id?.videoId || null });

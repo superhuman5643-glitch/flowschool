@@ -1,8 +1,8 @@
 /* ── FlowSchool — Lesson page ── */
 
 const WORDS_PER_MIN   = 200;
-const BREAK_WARN_MS   = 1 * 60 * 1000;   // ⚠️ TEST: 1 Min (Normalwert: 25 * 60 * 1000)
-const BREAK_FORCE_MS  = 2 * 60 * 1000;   // ⚠️ TEST: 2 Min (Normalwert: 27 * 60 * 1000)
+const BREAK_WARN_MS   = 25 * 60 * 1000;  // 25 min
+const BREAK_FORCE_MS  = 27 * 60 * 1000;  // 27 min
 const BREAK_DUR_S     = 5 * 60;          // 5 min pause
 const LS_ACTIVE_KEY   = 'fs_active_ms';
 const LS_SESSION_KEY  = 'fs_session_id';
@@ -139,10 +139,25 @@ function startBreak() {
 
 async function fetchBreakVideo() {
   try {
+    // Abwechslungsreiche Suchbegriffe – jede Pause fühlt sich anders an
+    const breakTerms = [
+      'Kinder Bewegungspause Mitmachvideo',
+      'Kinderyoga Mitmachen Schule',
+      'Bewegungsspiele Kinder Pause',
+      'Kinder Stretching Pause Mitmachen',
+      'Tanzen Kinder Mitmach Pause',
+      'Zumba Kids Mitmachen',
+      'Aerobic Kinder Bewegung',
+      'Kinder Brain Break Bewegung',
+      'Aktive Pause Grundschule Mitmachen',
+      'Kinder Sport Pause lustig',
+    ];
+    const searchTerm = breakTerms[Math.floor(Math.random() * breakTerms.length)];
+
     const res = await fetch('/api/youtube-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ searchTerm: 'Kinder Bewegungspause Mitmachvideo', isBreak: true })
+      body: JSON.stringify({ searchTerm, isBreak: true })
     });
     const { videoId } = await res.json();
     if (!videoId) {
