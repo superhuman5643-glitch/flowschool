@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>FlowSchool — Lernen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/kleinkind.css" />
+</head>
+<body>
+
+  <!-- Loading overlay -->
+  <div class="kk-loading" id="kk-loading">
+    <span class="kk-loading__mascot">🦁</span>
+    <div class="kk-loading__text">Gleich geht's los…</div>
+  </div>
+
+  <!-- ── HOME SCREEN ── -->
+  <div class="screen active" id="screen-home">
+    <div class="kk-topbar">
+      <div class="kk-topbar__logo">🌟 FlowSchool</div>
+      <div class="kk-topbar__stars" id="kk-stars">⭐</div>
+      <button class="kk-topbar__exit" id="exit-btn" title="Zurück zum Dashboard">✕</button>
+    </div>
+
+    <div class="kk-greeting">
+      <span class="kk-mascot" id="kk-mascot" onclick="greetChild()">🦁</span>
+      <div class="kk-greeting__name" id="kk-child-name">Hallo! 👋</div>
+    </div>
+
+    <div class="kk-subject-grid" id="kk-subject-grid">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- ── LESSON SCREEN ── -->
+  <div class="screen" id="screen-lesson">
+    <div class="kk-lesson-header" id="lesson-header">
+      <button class="kk-back-btn" id="lesson-back-btn">←</button>
+      <span class="kk-lesson-header__emoji" id="lesson-emoji">🐘</span>
+      <div class="kk-lesson-header__title" id="lesson-title">…</div>
+    </div>
+
+    <div class="kk-dots" id="kk-dots"></div>
+
+    <div class="kk-lesson-body" id="lesson-sentences">
+      <!-- Injected by JS -->
+    </div>
+
+    <div class="kk-quiz-section" id="lesson-quiz">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- ── WIN SCREEN ── -->
+  <div class="screen" id="screen-win">
+    <div class="kk-win" id="kk-win-body">
+      <span class="kk-win__trophy">🏆</span>
+      <div class="kk-win__title">Super gemacht!</div>
+      <div class="kk-win__praise" id="win-praise">Toll! 🎉</div>
+      <div class="kk-win__stars" id="win-stars">⭐⭐⭐</div>
+      <div class="kk-win__confetti">🎉🎊🎈🎉🎊</div>
+      <button class="kk-btn kk-btn--orange" id="win-next-btn">Weiter lernen ▶️</button>
+      <button class="kk-btn kk-btn--purple" id="win-home-btn">🏠 Alle Themen</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/kleinkind.js"></script>
+  <script>initKleinkind();</script>
+</body>
+</html>

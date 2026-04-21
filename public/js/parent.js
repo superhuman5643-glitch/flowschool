@@ -29,6 +29,10 @@ async function initParent() {
     form.style.display = form.style.display === 'none' ? '' : 'none';
   });
   document.getElementById('link-child-submit').addEventListener('click', linkChild);
+  document.getElementById('kleinkind-btn').addEventListener('click', () => {
+    if (!activeChildId) { showToast('Bitte zuerst ein Kind verlinken!', 'error'); return; }
+    window.location.href = `/kleinkind?childId=${activeChildId}&childName=${encodeURIComponent(activeChildName)}`;
+  });
 
   await loadChildren();
   await loadVideoSettings();
