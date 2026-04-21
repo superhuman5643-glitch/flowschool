@@ -378,3 +378,22 @@ body {
   color: #888;
   margin-bottom: 24px;
 }
+
+/* ── TWEMOJI (crisp SVG emoji as images) ── */
+.kk-main-photo--twemoji {
+  object-fit: contain !important;
+  padding: 20px;
+  background: linear-gradient(135deg, #fff8f0, #fff);
+}
+.kk-answer-photo--twemoji {
+  object-fit: contain !important;
+  padding: 10px;
+  background: linear-gradient(135deg, #f8f8ff, #fff);
+}
+
+/* ── KONFETTI ── */
+@keyframes kk-fall {
+  0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: translateY(100vh) translateX(var(--drift, 0px)) rotate(var(--rot, 360deg)); opacity: 0; }
+}

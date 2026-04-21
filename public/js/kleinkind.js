@@ -157,27 +157,49 @@ function renderSubjectGrid() {
 }
 
 /* ════════════════════════════════════════
-   WIKIPEDIA IMAGE FETCH
+   IMAGE FETCH — Wikipedia REST + Twemoji fallback
 ════════════════════════════════════════ */
+
+// Wikipedia REST API — much better coverage than the action API
 async function fetchWikipediaImage(term) {
   if (!term) return null;
   try {
-    const url  = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(term)}&prop=pageimages&format=json&pithumbsize=500&origin=*`;
-    const res  = await fetch(url);
+    const slug = encodeURIComponent(term.trim().toLowerCase().replace(/\s+/g, '_'));
+    const res  = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${slug}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) return null;
     const data = await res.json();
-    const page = Object.values(data?.query?.pages || {})[0];
-    return page?.thumbnail?.source || null;
+    return data?.thumbnail?.source || data?.originalimage?.source || null;
   } catch { return null; }
 }
 
-async function fetchAllImages(mainTerm, answers) {
-  const [mainPhoto, ...answerPhotos] = await Promise.all([
-    fetchWikipediaImage(mainTerm),
-    ...answers.map(a => fetchWikipediaImage(a.imageSearch || a.label))
+// Twemoji SVG — crisp, colorful illustration fallback for any emoji
+function twemojiUrl(emoji) {
+  if (!emoji) return null;
+  try {
+    const cp = [...emoji][0].codePointAt(0).toString(16);
+    return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${cp}.svg`;
+  } catch { return null; }
+}
+
+// Fetch real photo; fall back to Twemoji SVG
+async function fetchImage(term, fallbackEmoji) {
+  const photo = await fetchWikipediaImage(term);
+  if (photo) return { src: photo, isTwemoji: false };
+  const tw = twemojiUrl(fallbackEmoji);
+  return tw ? { src: tw, isTwemoji: true } : null;
+}
+
+async function fetchAllImages(mainTerm, mainEmoji, answers) {
+  const [mainImg, ...ansImgs] = await Promise.all([
+    fetchImage(mainTerm, mainEmoji),
+    ...answers.map(a => fetchImage(a.imageSearch || a.label, a.emoji))
   ]);
   return {
-    mainPhoto,
-    answers: answers.map((a, i) => ({ ...a, photo: answerPhotos[i] }))
+    mainImg,
+    answers: answers.map((a, i) => ({ ...a, img: ansImgs[i] }))
   };
 }
 
@@ -251,15 +273,18 @@ async function renderLesson(data) {
     `<div class="kk-dot ${i === 0 ? 'active' : ''}"></div>`
   ).join('');
 
-  // Fetch all photos in parallel while we render skeleton
+  // Fetch all images in parallel (Wikipedia + Twemoji fallback)
   const shuffled = shuffleAnswers(data.answers);
-  const { mainPhoto, answers: answersWithPhotos } = await fetchAllImages(data.imageSearch, shuffled);
+  const { mainImg, answers: answersWithImgs } = await fetchAllImages(
+    data.imageSearch, data.emoji, shuffled
+  );
 
   // Main image
   const sentBox = document.getElementById('lesson-sentences');
-  const mainImgHtml = mainPhoto
-    ? `<img class="kk-main-photo" src="${mainPhoto}" alt="${data.title}"
-          onerror="this.outerHTML='<div class=kk-main-photo-emoji>${data.emoji}</div>'" />`
+  const mainImgHtml = mainImg
+    ? `<img class="kk-main-photo${mainImg.isTwemoji ? ' kk-main-photo--twemoji' : ''}"
+            src="${mainImg.src}" alt="${data.title}"
+            onerror="this.style.display='none'" />`
     : `<div class="kk-main-photo-emoji">${data.emoji}</div>`;
 
   sentBox.innerHTML = `
@@ -270,16 +295,17 @@ async function renderLesson(data) {
         <div class="kk-sentence-card__text">${s}</div>
       </div>`).join('')}`;
 
-  // Quiz with photos
+  // Quiz with images
   document.getElementById('lesson-quiz').innerHTML = `
     <div class="kk-quiz-question" onclick="speakText('${escQ(data.question)}')">${data.question} 🤔</div>
     <div class="kk-answers-grid">
-      ${answersWithPhotos.map((a, i) => `
+      ${answersWithImgs.map((a, i) => `
         <div class="kk-answer-btn" id="ans-${i}"
              onclick="checkAnswer(this, ${a.correct}, '${escQ(data.praise)}', '${escQ(a.label)}')">
-          ${a.photo
-            ? `<img class="kk-answer-photo" src="${a.photo}" alt="${a.label}"
-                    onerror="this.outerHTML='<span class=kk-answer-btn__emoji>${a.emoji}</span>'" />`
+          ${a.img
+            ? `<img class="kk-answer-photo${a.img.isTwemoji ? ' kk-answer-photo--twemoji' : ''}"
+                    src="${a.img.src}" alt="${a.label}"
+                    onerror="this.style.display='none'" />`
             : `<span class="kk-answer-btn__emoji">${a.emoji}</span>`}
           <span class="kk-answer-btn__label">${a.label}</span>
         </div>`).join('')}
@@ -345,6 +371,67 @@ function speakSentence(index) {
 }
 
 /* ════════════════════════════════════════
+   KONFETTI ANIMATION
+════════════════════════════════════════ */
+function launchConfetti(big = false) {
+  const existing = document.getElementById('kk-confetti');
+  if (existing) existing.remove();
+
+  const wrap = document.createElement('div');
+  wrap.id = 'kk-confetti';
+  wrap.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden';
+  document.body.appendChild(wrap);
+
+  const colors  = ['#ff8c42','#ffcc6a','#7c6aff','#34d399','#ff6a9e','#60a5fa','#fff','#f87171'];
+  const count   = big ? 120 : 60;
+
+  for (let i = 0; i < count; i++) {
+    const el      = document.createElement('div');
+    const size    = Math.random() * 14 + 6;
+    const color   = colors[Math.floor(Math.random() * colors.length)];
+    const startX  = Math.random() * 110 - 5;
+    const delay   = Math.random() * 0.6;
+    const dur     = Math.random() * 1.8 + 1.4;
+    const rotEnd  = Math.random() * 900 - 450;
+    const driftX  = (Math.random() - 0.5) * 200;
+
+    el.style.cssText = `
+      position:absolute;
+      top:-${size * 2}px;
+      left:${startX}%;
+      width:${size}px;
+      height:${size * (Math.random() > 0.5 ? 1 : 0.5)}px;
+      background:${color};
+      border-radius:${Math.random() > 0.4 ? '50%' : '2px'};
+      animation: kk-fall ${dur}s ease-in ${delay}s forwards;
+      --drift: ${driftX}px;
+      --rot: ${rotEnd}deg;
+    `;
+    wrap.appendChild(el);
+  }
+
+  // Big stars burst for milestones
+  if (big) {
+    ['⭐','🌟','✨','🎉','🎊'].forEach((em, i) => {
+      const s = document.createElement('div');
+      s.textContent = em;
+      s.style.cssText = `
+        position:absolute;
+        font-size:${Math.random()*28+20}px;
+        top:-40px;
+        left:${15 + i * 18}%;
+        animation: kk-fall ${1.8 + i*0.2}s ease-in ${i*0.12}s forwards;
+        --drift:${(Math.random()-0.5)*150}px;
+        --rot:${Math.random()*360}deg;
+      `;
+      wrap.appendChild(s);
+    });
+  }
+
+  setTimeout(() => wrap.remove(), 4000);
+}
+
+/* ════════════════════════════════════════
    QUIZ
 ════════════════════════════════════════ */
 function checkAnswer(el, correct, praise, label) {
@@ -355,13 +442,15 @@ function checkAnswer(el, correct, praise, label) {
     el.classList.add('kk-answer-btn--correct');
     document.querySelectorAll('.kk-answer-btn').forEach(b => b.style.pointerEvents = 'none');
 
-    const total = addStar();
+    const total   = addStar();
     addProgress(kk.currentSubject?.id);
 
-    // Milestone celebrations
+    const isMilestone = total % 5 === 0;
+    launchConfetti(isMilestone);
+
     let celebText = praise || 'Super gemacht!';
-    if (total % 10 === 0) celebText = `Wahnsinn! ${total} Sterne gesammelt! Du bist ein Superstar! 🌟`;
-    else if (total % 5 === 0) celebText = `${total} Sterne! Fantastisch! 🎉`;
+    if (total % 10 === 0) celebText = `Wahnsinn! ${total} Sterne! Du bist ein Superstar!`;
+    else if (total % 5 === 0) celebText = `${total} Sterne! Fantastisch!`;
 
     speak(celebText, () => setTimeout(() => showWin(celebText, total), 300));
   } else {
@@ -375,13 +464,15 @@ function checkAnswer(el, correct, praise, label) {
    WIN SCREEN
 ════════════════════════════════════════ */
 function showWin(praise, totalStars) {
-  const stars = Math.min(totalStars || getTotalStars(), 9);
+  const total = totalStars || getTotalStars();
+  const stars = Math.min(total, 9);
   document.getElementById('win-praise').textContent = praise || 'Super gemacht! 🎉';
   document.getElementById('win-stars').textContent  = '⭐'.repeat(stars);
-  // Show total stars collected
   const totalEl = document.getElementById('win-total');
-  if (totalEl) totalEl.textContent = `Gesamt: ${getTotalStars()} ⭐`;
+  if (totalEl) totalEl.textContent = `Gesamt: ${getTotalStars()} ⭐ gesammelt`;
   showScreen('win');
+  // Konfetti auf dem Win-Screen nochmal!
+  setTimeout(() => launchConfetti(total % 5 === 0), 200);
 }
 
 /* ════════════════════════════════════════
