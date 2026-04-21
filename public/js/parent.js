@@ -646,7 +646,7 @@ async function loadSubjectsForChild(childId, childName) {
 
     container.innerHTML = '';
     (data.subjects || []).forEach(subject => {
-      const isCustom = !!subject.created_by;
+      const isCustom = !subject.is_mandatory;
 
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:8px;';

@@ -225,11 +225,12 @@ export default async function handler(req, res) {
     const { subjectId, parentId } = req.body;
     if (!subjectId) return res.status(400).json({ error: 'Missing subjectId' });
 
-    // Only allow deletion of custom subjects created by this parent
-    const { data: subject } = await sb.from('subjects').select('created_by').eq('id', subjectId).maybeSingle();
+    // Protect only the built-in mandatory subjects; everything else can be deleted
+    const { data: subject } = await sb.from('subjects').select('is_mandatory, created_by').eq('id', subjectId).maybeSingle();
     if (!subject) return res.status(404).json({ error: 'Thema nicht gefunden' });
-    if (!subject.created_by) return res.status(403).json({ error: 'Standard-Themen können nicht gelöscht werden' });
-    if (parentId && subject.created_by !== parentId) return res.status(403).json({ error: 'Keine Berechtigung' });
+    if (subject.is_mandatory) return res.status(403).json({ error: 'Pflicht-Kernthemen können nicht gelöscht werden' });
+    // If subject has an owner, only that parent may delete it
+    if (subject.created_by && parentId && subject.created_by !== parentId) return res.status(403).json({ error: 'Keine Berechtigung' });
 
     // Remove from all child_subjects first (FK), then delete subject
     await sb.from('child_subjects').delete().eq('subject_id', subjectId);
