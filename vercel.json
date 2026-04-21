@@ -3,6 +3,7 @@
     { "source": "/home", "destination": "/home.html" },
     { "source": "/lesson", "destination": "/lesson.html" },
     { "source": "/parent", "destination": "/parent.html" },
+    { "source": "/kleinkind", "destination": "/kleinkind.html" },
     { "source": "/", "destination": "/index.html" }
   ]
 }
