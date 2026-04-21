@@ -1,8 +1,8 @@
 /* ── FlowSchool — Lesson page ── */
 
 const WORDS_PER_MIN   = 200;
-const BREAK_WARN_MS   = 1 * 60 * 1000;   // ⚠️ TEST (normal: 25 min)
-const BREAK_FORCE_MS  = 2 * 60 * 1000;   // ⚠️ TEST (normal: 27 min)
+const BREAK_WARN_MS   = 25 * 60 * 1000;  // 25 min
+const BREAK_FORCE_MS  = 27 * 60 * 1000;  // 27 min
 const BREAK_DUR_S     = 5 * 60;          // 5 min pause
 const LS_ACTIVE_KEY   = 'fs_active_ms';
 const LS_SESSION_KEY  = 'fs_session_id';
