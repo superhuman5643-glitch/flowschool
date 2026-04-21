@@ -628,8 +628,10 @@ function setupSubjectsManager() {
 }
 
 async function loadSubjectsForChild(childId, childName) {
-  const nameEl = document.getElementById('subjects-child-name');
-  if (nameEl) nameEl.textContent = childName || 'dein Kind';
+  // Update all name placeholders in the subjects panel
+  document.querySelectorAll('#subjects-child-name, .subjects-child-name-inline').forEach(el => {
+    el.textContent = childName || 'dein Kind';
+  });
 
   const container = document.getElementById('subjects-list');
   container.innerHTML = '<div class="text-sm text-muted">Lade Fächer…</div>';
@@ -644,21 +646,60 @@ async function loadSubjectsForChild(childId, childName) {
 
     container.innerHTML = '';
     (data.subjects || []).forEach(subject => {
+      const isCustom = !!subject.created_by;
+
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
       const label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .2s';
+      label.style.cssText = 'flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .2s;min-width:0';
       label.innerHTML = `
-        <input type="checkbox" data-id="${subject.id}" ${subject.active ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple)" />
-        <span style="font-size:1.1rem">${subject.emoji || '📖'}</span>
-        <span style="flex:1;font-size:.9rem">${subject.name}</span>
+        <input type="checkbox" data-id="${subject.id}" ${subject.active ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple);flex-shrink:0" />
+        <span style="font-size:1.1rem;flex-shrink:0">${subject.emoji || '📖'}</span>
+        <span style="flex:1;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subject.name}</span>
       `;
       label.querySelector('input').addEventListener('change', (e) => {
         label.style.borderColor = e.target.checked ? 'var(--purple)' : 'var(--border)';
       });
       if (subject.active) label.style.borderColor = 'var(--purple)';
-      container.appendChild(label);
+
+      row.appendChild(label);
+
+      // Delete button — only for custom (parent-created) subjects
+      if (isCustom) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm';
+        delBtn.title = 'Thema löschen';
+        delBtn.style.cssText = 'flex-shrink:0;padding:8px 10px;color:var(--pink);border-color:var(--pink);opacity:.7;transition:opacity .2s';
+        delBtn.innerHTML = '🗑️';
+        delBtn.addEventListener('mouseenter', () => delBtn.style.opacity = '1');
+        delBtn.addEventListener('mouseleave', () => delBtn.style.opacity = '.7');
+        delBtn.addEventListener('click', () => deleteSubject(subject.id, subject.name, childId, childName));
+        row.appendChild(delBtn);
+      }
+
+      container.appendChild(row);
     });
   } catch (err) {
     container.innerHTML = `<div class="text-sm" style="color:var(--pink)">Fehler: ${err.message}</div>`;
+  }
+}
+
+async function deleteSubject(subjectId, subjectName, childId, childName) {
+  if (!confirm(`„${subjectName}" wirklich löschen? Das Thema wird bei allen Kindern entfernt.`)) return;
+
+  try {
+    const res  = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete-subject', subjectId, parentId: parentCtx.user.id })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Fehler');
+    showToast(`„${subjectName}" gelöscht.`, 'success');
+    await loadSubjectsForChild(childId, childName);
+  } catch (err) {
+    showToast('Fehler: ' + err.message, 'error');
   }
 }
 
@@ -719,7 +760,7 @@ async function createSubject() {
     nameEl.value            = '';
     previewEl.textContent   = '📖';
     statusEl.textContent = `✅ "${name}" erstellt und hinzugefügt!`;
-    showToast(`Thema "${name}" erstellt! 🎉`, 'success');
+    showToast(`Kernthema „${name}" erstellt! 🎉`, 'success');
     await loadSubjectsForChild(activeChildId, activeChildName);
   } catch (err) {
     statusEl.textContent = '❌ ' + err.message;

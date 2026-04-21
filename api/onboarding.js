@@ -220,5 +220,24 @@ export default async function handler(req, res) {
     return res.json({ ok: true, subject: newSubject });
   }
 
+  // POST { action: 'delete-subject', subjectId, parentId }
+  if (action === 'delete-subject') {
+    const { subjectId, parentId } = req.body;
+    if (!subjectId) return res.status(400).json({ error: 'Missing subjectId' });
+
+    // Only allow deletion of custom subjects created by this parent
+    const { data: subject } = await sb.from('subjects').select('created_by').eq('id', subjectId).maybeSingle();
+    if (!subject) return res.status(404).json({ error: 'Thema nicht gefunden' });
+    if (!subject.created_by) return res.status(403).json({ error: 'Standard-Themen können nicht gelöscht werden' });
+    if (parentId && subject.created_by !== parentId) return res.status(403).json({ error: 'Keine Berechtigung' });
+
+    // Remove from all child_subjects first (FK), then delete subject
+    await sb.from('child_subjects').delete().eq('subject_id', subjectId);
+    const { error: delErr } = await sb.from('subjects').delete().eq('id', subjectId);
+    if (delErr) return res.status(500).json({ error: delErr.message });
+
+    return res.json({ ok: true });
+  }
+
   res.status(400).json({ error: 'Unknown action' });
 }
