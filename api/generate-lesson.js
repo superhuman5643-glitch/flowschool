@@ -12,26 +12,31 @@ export default async function handler(req, res) {
 
   // ── KLEINKIND MODE ──
   if (req.body.mode === 'kleinkind') {
+    const { shownTopics = [] } = req.body;
+    const avoidText = shownTopics.length > 0
+      ? `\nBereits gezeigt — unbedingt etwas ANDERES wählen: ${shownTopics.join(', ')}.`
+      : '';
     try {
       const msg = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 600,
+        max_tokens: 800,
         system: `Du erstellst Lerneinheiten für Kleinkinder (2-5 Jahre) die noch nicht lesen können.
-Antworte NUR mit validem JSON in exakt diesem Format (keine Erklärung drumherum):
+Antworte NUR mit validem JSON in exakt diesem Format:
 {
-  "title": "kurzer Name (1-2 Wörter)",
+  "title": "Spezifisches Unterthema auf Deutsch (1-2 Wörter, z.B. 'Der Elefant')",
   "emoji": "1 passendes Emoji",
-  "sentences": ["Satz 1 (max 8 Wörter, sehr einfach).", "Satz 2 (max 8 Wörter).", "Satz 3 (max 8 Wörter)."],
+  "imageSearch": "englischer Wikipedia-Suchbegriff für Hauptbild (z.B. 'elephant', 'sunflower', 'red color wheel')",
+  "sentences": ["Satz 1 (max 8 einfache Wörter).", "Satz 2.", "Satz 3."],
   "question": "Einfache Frage (max 6 Wörter)?",
   "answers": [
-    {"emoji": "Emoji", "label": "1 Wort", "correct": true},
-    {"emoji": "Emoji", "label": "1 Wort", "correct": false},
-    {"emoji": "Emoji", "label": "1 Wort", "correct": false},
-    {"emoji": "Emoji", "label": "1 Wort", "correct": false}
+    {"emoji": "Emoji", "label": "1 deutsches Wort", "imageSearch": "englischer Wikipedia-Begriff", "correct": true},
+    {"emoji": "Emoji", "label": "1 deutsches Wort", "imageSearch": "englischer Wikipedia-Begriff", "correct": false},
+    {"emoji": "Emoji", "label": "1 deutsches Wort", "imageSearch": "englischer Wikipedia-Begriff", "correct": false},
+    {"emoji": "Emoji", "label": "1 deutsches Wort", "imageSearch": "englischer Wikipedia-Begriff", "correct": false}
   ],
-  "praise": "Kurzes Lob (max 8 Wörter) + Emoji"
+  "praise": "Kurzes Lob auf Deutsch (max 8 Wörter) + Emoji"
 }
-Wichtig: Wähle jedes Mal ein ANDERES spezifisches Unterthema (z.B. bei "Tiere" mal Elefant, mal Katze, mal Hund usw.)`,
+Wähle jedes Mal ein spezifisches Unterthema — nie das Oberthema selbst.${avoidText}`,
         messages: [{ role: 'user', content: `Erstelle eine Kleinkind-Lerneinheit zum Thema: "${subjectName}"` }]
       });
       const raw = msg.content[0].text.trim();
