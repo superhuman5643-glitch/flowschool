@@ -233,6 +233,14 @@ function setupBreakControls(player) {
     });
   }
 
+  // Rewind 15s
+  const breakRewindBtn = document.getElementById('break-rewind');
+  if (breakRewindBtn) {
+    breakRewindBtn.addEventListener('click', () => {
+      try { player.seekTo(Math.max(0, player.getCurrentTime() - 15), true); } catch {}
+    });
+  }
+
   // Mute
   const muteBtn = document.getElementById('break-mute');
   if (muteBtn) {
@@ -508,6 +516,14 @@ function setupVideoControls(player) {
         if (s === YT.PlayerState.PLAYING) { player.pauseVideo(); ppBtn.textContent = '▶️ Play'; }
         else { player.playVideo(); ppBtn.textContent = '⏸ Pause'; }
       } catch {}
+    });
+  }
+
+  // Rewind 15s button
+  const rewindBtn = document.getElementById('yt-rewind');
+  if (rewindBtn) {
+    rewindBtn.addEventListener('click', () => {
+      try { player.seekTo(Math.max(0, player.getCurrentTime() - 15), true); } catch {}
     });
   }
 
