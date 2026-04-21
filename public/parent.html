@@ -190,9 +190,18 @@
         <div class="panel__title">📚 Fächer & Themen</div>
       </div>
       <div class="panel__body">
-        <p class="text-sm text-muted" style="margin-bottom:20px">
-          Lege fest welche Fächer <span id="subjects-child-name">dein Kind</span> sieht. Du kannst eigene Themen erstellen — egal wie viele.
-        </p>
+        <!-- How-it-works box -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start">
+          <span style="font-size:1.4rem;flex-shrink:0;line-height:1">💡</span>
+          <div>
+            <div style="font-size:.9rem;font-weight:600;margin-bottom:4px">So funktioniert es</div>
+            <div class="text-sm text-muted" style="line-height:1.5">
+              Die <strong style="color:var(--text)">angehakten Fächer</strong> erscheinen auf der Startseite von <span id="subjects-child-name">deinem Kind</span>.
+              Du kannst jederzeit neue Themen hinzufügen — z.B. Gitarre, Spanisch oder Kochen.
+              Das Emoji wird automatisch passend ausgewählt.
+            </div>
+          </div>
+        </div>
 
         <!-- Subject checkboxes -->
         <div id="subjects-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px">
@@ -207,11 +216,16 @@
         <hr style="border:none;border-top:1px solid var(--border);margin-bottom:20px" />
 
         <!-- Create new subject -->
-        <div class="panel__title" style="font-size:.95rem;margin-bottom:14px">➕ Neues Thema erstellen</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <div style="flex:0 0 80px">
-            <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Emoji</label>
-            <input class="input" id="new-subject-emoji" placeholder="📖" style="text-align:center;font-size:1.3rem;padding:6px 8px" maxlength="2" />
+        <div class="panel__title" style="font-size:.95rem;margin-bottom:6px">➕ Neues Thema erstellen</div>
+        <p class="text-sm text-muted" style="margin-bottom:14px">Einfach den Namen eintippen — das Emoji wird automatisch erkannt. Du kannst es auch selbst anpassen.</p>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <!-- Emoji preview / manual override -->
+          <div style="flex-shrink:0;text-align:center">
+            <div id="new-subject-emoji-preview"
+              contenteditable="true"
+              style="width:52px;height:52px;background:var(--bg2);border:2px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:text;transition:border-color .2s;user-select:text;outline:none"
+              title="Emoji anpassen">📖</div>
+            <div class="text-sm text-muted" style="margin-top:4px;font-size:.7rem;opacity:.6">Tippen zum Ändern</div>
           </div>
           <div style="flex:1;min-width:180px">
             <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Name des Themas</label>

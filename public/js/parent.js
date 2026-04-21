@@ -493,10 +493,138 @@ async function loadVideoSettings() {
   } catch {}
 }
 
+/* ─── Emoji auto-detection ─── */
+function guessEmoji(name) {
+  const n = name.toLowerCase().trim();
+  if (!n) return '📖';
+
+  const map = [
+    // Languages
+    [/spanisch|español/,                   '🇪🇸'],
+    [/englisch|english/,                   '🇬🇧'],
+    [/französisch|french|français/,        '🇫🇷'],
+    [/italienisch|italiano/,               '🇮🇹'],
+    [/japanisch|japanese/,                 '🇯🇵'],
+    [/chinesisch|chinese|mandarin/,        '🇨🇳'],
+    [/latein|latin/,                       '🏛️'],
+    [/sprache|language/,                   '🗣️'],
+    // STEM
+    [/mathe|mathematik|rechnen/,           '📐'],
+    [/geometrie/,                          '📏'],
+    [/physik|physics/,                     '⚛️'],
+    [/chemie|chemistry/,                   '🧪'],
+    [/biologie|biology/,                   '🧬'],
+    [/programmier|coding|code|python|javascript|informatik/, '💻'],
+    [/elektronik|elektro/,                 '🔌'],
+    [/roboter|robotik/,                    '🤖'],
+    [/künstliche intelligenz|ki\b|ai\b/,   '🧠'],
+    [/statistik|stochastik/,              '📊'],
+    [/astronomie|weltraum|sterne|raumfahrt/, '🚀'],
+    // Nature / animals
+    [/natur|wald|pflanze|botanik/,         '🌿'],
+    [/tier|zoo|wildtier/,                  '🦁'],
+    [/pferd|reiten/,                       '🐴'],
+    [/hund/,                               '🐕'],
+    [/katze/,                              '🐱'],
+    [/haustier/,                           '🐾'],
+    [/vogel/,                              '🦅'],
+    [/meer|ozean|fisch|tauchen/,           '🌊'],
+    [/landmaschine|traktor|landwirtschaft/, '🚜'],
+    // Music
+    [/gitarre/,                            '🎸'],
+    [/klavier|piano/,                      '🎹'],
+    [/schlagzeug|drums/,                   '🥁'],
+    [/geige|violine/,                      '🎻'],
+    [/flöte/,                              '🪈'],
+    [/singen|gesang|chor/,                 '🎤'],
+    [/musik/,                              '🎵'],
+    // Arts
+    [/zeichnen|malen|illustration/,        '✏️'],
+    [/kunst|art\b/,                        '🎨'],
+    [/design|grafik/,                      '🎨'],
+    [/fotografie|foto/,                    '📷'],
+    [/film|video|kamera|videoschnitt/,     '🎬'],
+    [/theater|schauspiel/,                 '🎭'],
+    // Sports
+    [/fußball/,                            '⚽'],
+    [/basketball/,                         '🏀'],
+    [/tennis/,                             '🎾'],
+    [/volleyball/,                         '🏐'],
+    [/schwimmen/,                          '🏊'],
+    [/radfahren|fahrrad/,                  '🚴'],
+    [/laufen|joggen/,                      '🏃'],
+    [/yoga|meditation/,                    '🧘'],
+    [/tanzen|tanz/,                        '💃'],
+    [/turnen/,                             '🤸'],
+    [/kampfsport|judo|karate/,             '🥋'],
+    [/sport|fitness|training/,             '🏋️'],
+    // Life skills / business
+    [/kochen|backen|küche/,                '🍳'],
+    [/business|unternehmen|startup|firma/, '🏪'],
+    [/finanzen|geld|investieren|wirtschaft/, '💰'],
+    [/marketing|werbung/,                  '📣'],
+    [/emotion|gefühl|empathie/,            '💛'],
+    [/psychologie/,                        '🧠'],
+    [/philosophie/,                        '💭'],
+    [/geschichte|history/,                 '🏺'],
+    [/geografie|geography|länder/,         '🌍'],
+    [/politik/,                            '🏛️'],
+    // Craft / practical
+    [/handwerk|werken|basteln/,            '🔧'],
+    [/lego|bauen|konstruktion/,            '🧱'],
+    [/nähen|stricken|häkeln/,              '🧵'],
+    [/garten|pflanzen|botanik/,            '🌱'],
+    [/reisen|reise/,                       '✈️'],
+  ];
+
+  for (const [re, emoji] of map) {
+    if (re.test(n)) return emoji;
+  }
+  return '📖';
+}
+
 /* ─── Subjects Manager ─── */
 function setupSubjectsManager() {
   document.getElementById('subjects-save').addEventListener('click', saveSubjects);
   document.getElementById('new-subject-create').addEventListener('click', createSubject);
+
+  // Auto-update emoji preview as user types the subject name
+  const nameInput    = document.getElementById('new-subject-name');
+  const emojiPreview = document.getElementById('new-subject-emoji-preview');
+
+  let userEditedEmoji = false; // track if parent manually changed the emoji
+
+  nameInput.addEventListener('input', () => {
+    if (!userEditedEmoji) {
+      const suggested = guessEmoji(nameInput.value);
+      emojiPreview.textContent = suggested;
+    }
+  });
+
+  // When parent focuses the emoji preview, mark it as manually edited
+  emojiPreview.addEventListener('focus', () => { userEditedEmoji = true; });
+
+  // Reset manual-edit flag when name input is cleared
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && nameInput.value === '') userEditedEmoji = false;
+  });
+
+  // Highlight emoji box on focus
+  emojiPreview.addEventListener('focus', () => {
+    emojiPreview.style.borderColor = 'var(--purple)';
+    // Select all so typing replaces the current emoji
+    const range = document.createRange();
+    range.selectNodeContents(emojiPreview);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+  emojiPreview.addEventListener('blur', () => {
+    emojiPreview.style.borderColor = 'var(--border)';
+    // Keep only the first emoji character
+    const text = emojiPreview.textContent.trim();
+    if (!text) { emojiPreview.textContent = guessEmoji(nameInput.value); userEditedEmoji = false; }
+  });
 }
 
 async function loadSubjectsForChild(childId, childName) {
@@ -566,13 +694,13 @@ async function saveSubjects() {
 
 async function createSubject() {
   if (!activeChildId) { showToast('Erst ein Kind auswählen.', 'error'); return; }
-  const nameEl   = document.getElementById('new-subject-name');
-  const emojiEl  = document.getElementById('new-subject-emoji');
-  const statusEl = document.getElementById('new-subject-status');
-  const btn      = document.getElementById('new-subject-create');
+  const nameEl    = document.getElementById('new-subject-name');
+  const previewEl = document.getElementById('new-subject-emoji-preview');
+  const statusEl  = document.getElementById('new-subject-status');
+  const btn       = document.getElementById('new-subject-create');
 
   const name  = nameEl.value.trim();
-  const emoji = emojiEl.value.trim() || '📖';
+  const emoji = (previewEl.textContent.trim() || guessEmoji(name));
   if (!name) { statusEl.textContent = '⚠️ Bitte einen Namen eingeben.'; return; }
 
   btn.disabled    = true;
@@ -588,8 +716,8 @@ async function createSubject() {
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || 'Fehler');
 
-    nameEl.value  = '';
-    emojiEl.value = '';
+    nameEl.value            = '';
+    previewEl.textContent   = '📖';
     statusEl.textContent = `✅ "${name}" erstellt und hinzugefügt!`;
     showToast(`Thema "${name}" erstellt! 🎉`, 'success');
     await loadSubjectsForChild(activeChildId, activeChildName);
