@@ -588,42 +588,35 @@ function setupSubjectsManager() {
   document.getElementById('subjects-save').addEventListener('click', saveSubjects);
   document.getElementById('new-subject-create').addEventListener('click', createSubject);
 
-  // Auto-update emoji preview as user types the subject name
-  const nameInput    = document.getElementById('new-subject-name');
-  const emojiPreview = document.getElementById('new-subject-emoji-preview');
+  const nameInput  = document.getElementById('new-subject-name');
+  const emojiInput = document.getElementById('new-subject-emoji-input');
 
-  let userEditedEmoji = false; // track if parent manually changed the emoji
-
+  // Auto-fill emoji when name changes, unless parent manually edited it
   nameInput.addEventListener('input', () => {
-    if (!userEditedEmoji) {
-      const suggested = guessEmoji(nameInput.value);
-      emojiPreview.textContent = suggested;
+    // Only auto-fill if the field still shows the default or a previously auto-filled value
+    if (!emojiInput.dataset.manualEdit) {
+      emojiInput.value = guessEmoji(nameInput.value);
     }
   });
 
-  // When parent focuses the emoji preview, mark it as manually edited
-  emojiPreview.addEventListener('focus', () => { userEditedEmoji = true; });
-
-  // Reset manual-edit flag when name input is cleared
-  nameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Backspace' && nameInput.value === '') userEditedEmoji = false;
+  // Mark as manually edited once the parent types into the emoji field
+  emojiInput.addEventListener('input', () => {
+    emojiInput.dataset.manualEdit = '1';
+    if (!emojiInput.value.trim()) delete emojiInput.dataset.manualEdit;
   });
 
-  // Highlight emoji box on focus
-  emojiPreview.addEventListener('focus', () => {
-    emojiPreview.style.borderColor = 'var(--purple)';
-    // Select all so typing replaces the current emoji
-    const range = document.createRange();
-    range.selectNodeContents(emojiPreview);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+  // Visual focus highlight
+  emojiInput.addEventListener('focus', () => {
+    emojiInput.style.borderColor = 'var(--purple)';
+    emojiInput.select();
   });
-  emojiPreview.addEventListener('blur', () => {
-    emojiPreview.style.borderColor = 'var(--border)';
-    // Keep only the first emoji character
-    const text = emojiPreview.textContent.trim();
-    if (!text) { emojiPreview.textContent = guessEmoji(nameInput.value); userEditedEmoji = false; }
+  emojiInput.addEventListener('blur',  () => {
+    emojiInput.style.borderColor = 'var(--border)';
+    // Fall back to auto-guess if left empty
+    if (!emojiInput.value.trim()) {
+      emojiInput.value = guessEmoji(nameInput.value);
+      delete emojiInput.dataset.manualEdit;
+    }
   });
 }
 
@@ -736,12 +729,12 @@ async function saveSubjects() {
 async function createSubject() {
   if (!activeChildId) { showToast('Erst ein Kind auswählen.', 'error'); return; }
   const nameEl    = document.getElementById('new-subject-name');
-  const previewEl = document.getElementById('new-subject-emoji-preview');
+  const emojiEl   = document.getElementById('new-subject-emoji-input');
   const statusEl  = document.getElementById('new-subject-status');
   const btn       = document.getElementById('new-subject-create');
 
   const name  = nameEl.value.trim();
-  const emoji = (previewEl.textContent.trim() || guessEmoji(name));
+  const emoji = (emojiEl.value.trim() || guessEmoji(name));
   if (!name) { statusEl.textContent = '⚠️ Bitte einen Namen eingeben.'; return; }
 
   btn.disabled    = true;
@@ -757,8 +750,9 @@ async function createSubject() {
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || 'Fehler');
 
-    nameEl.value            = '';
-    previewEl.textContent   = '📖';
+    nameEl.value  = '';
+    emojiEl.value = '📖';
+    delete emojiEl.dataset.manualEdit;
     statusEl.textContent = `✅ "${name}" erstellt und hinzugefügt!`;
     showToast(`Kernthema „${name}" erstellt! 🎉`, 'success');
     await loadSubjectsForChild(activeChildId, activeChildName);

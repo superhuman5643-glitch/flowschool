@@ -219,13 +219,14 @@
         <div class="panel__title" style="font-size:.95rem;margin-bottom:6px">➕ Neues Thema erstellen</div>
         <p class="text-sm text-muted" style="margin-bottom:14px">Einfach den Namen eintippen — das Emoji wird automatisch erkannt. Du kannst es auch selbst anpassen.</p>
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-          <!-- Emoji preview / manual override -->
+          <!-- Emoji input — auto-filled, manually overrideable -->
           <div style="flex-shrink:0;text-align:center">
-            <div id="new-subject-emoji-preview"
-              contenteditable="true"
-              style="width:52px;height:52px;background:var(--bg2);border:2px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;cursor:text;transition:border-color .2s;user-select:text;outline:none"
-              title="Emoji anpassen">📖</div>
-            <div class="text-sm text-muted" style="margin-top:4px;font-size:.7rem;opacity:.6">Tippen zum Ändern</div>
+            <input id="new-subject-emoji-input" type="text"
+              value="📖"
+              maxlength="8"
+              style="width:58px;height:52px;background:var(--bg2);border:2px solid var(--border);border-radius:12px;text-align:center;font-size:1.6rem;padding:0;color:var(--text);cursor:text;outline:none;transition:border-color .2s;font-family:inherit"
+              title="Emoji anpassen — einfach überschreiben" />
+            <div class="text-sm text-muted" style="margin-top:4px;font-size:.7rem;opacity:.6">Änderbar</div>
           </div>
           <div style="flex:1;min-width:180px">
             <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Name des Themas</label>
