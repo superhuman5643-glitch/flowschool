@@ -64,14 +64,30 @@ async function loadStats(sb, userId) {
 /* ─── Subjects ─── */
 async function loadSubjects(sb, userId) {
 
-  // Fetch subjects
-  const { data: mandatory } = await sb.from('subjects').select('*').eq('is_mandatory', true).order('sort_order');
-  const { data: unlockedRows } = await sb.from('unlocked_subjects').select('subject_id').eq('user_id', userId);
-  const unlockedIds = (unlockedRows || []).map(r => r.subject_id);
-  let optional = [];
-  if (unlockedIds.length > 0) {
-    const { data } = await sb.from('subjects').select('*').in('id', unlockedIds).order('sort_order');
-    optional = data || [];
+  // Check if parent has configured custom subjects for this child
+  const { data: childSubRows } = await sb.from('child_subjects').select('subject_id, sort_order').eq('user_id', userId).order('sort_order');
+  const hasCustomConfig = childSubRows && childSubRows.length > 0;
+
+  let mandatory = [];
+  let optional  = [];
+
+  if (hasCustomConfig) {
+    // Use parent-configured subjects (in their chosen order)
+    const ids = childSubRows.map(r => r.subject_id);
+    const { data: customSubjects } = await sb.from('subjects').select('*').in('id', ids);
+    mandatory = ids.map(id => (customSubjects || []).find(s => s.id === id)).filter(Boolean);
+    // No extras section when parent has configured subjects
+  } else {
+    // Original fallback: use is_mandatory flag + unlocked_subjects
+    const { data: mandatoryData } = await sb.from('subjects').select('*').eq('is_mandatory', true).order('sort_order');
+    mandatory = mandatoryData || [];
+
+    const { data: unlockedRows } = await sb.from('unlocked_subjects').select('subject_id').eq('user_id', userId);
+    const unlockedIds = (unlockedRows || []).map(r => r.subject_id);
+    if (unlockedIds.length > 0) {
+      const { data } = await sb.from('subjects').select('*').in('id', unlockedIds).order('sort_order');
+      optional = data || [];
+    }
   }
 
   // Progress + lessons

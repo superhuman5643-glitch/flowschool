@@ -184,6 +184,45 @@
 
     </div>
 
+    <!-- Subjects Manager -->
+    <div class="panel" style="margin-bottom:24px" id="subjects-panel">
+      <div class="panel__header">
+        <div class="panel__title">📚 Fächer & Themen</div>
+      </div>
+      <div class="panel__body">
+        <p class="text-sm text-muted" style="margin-bottom:20px">
+          Lege fest welche Fächer <span id="subjects-child-name">dein Kind</span> sieht. Du kannst eigene Themen erstellen — egal wie viele.
+        </p>
+
+        <!-- Subject checkboxes -->
+        <div id="subjects-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px">
+          <div class="text-sm text-muted">Lade Fächer…</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="subjects-save">Speichern</button>
+          <span class="text-sm text-muted" id="subjects-save-status"></span>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin-bottom:20px" />
+
+        <!-- Create new subject -->
+        <div class="panel__title" style="font-size:.95rem;margin-bottom:14px">➕ Neues Thema erstellen</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:0 0 80px">
+            <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Emoji</label>
+            <input class="input" id="new-subject-emoji" placeholder="📖" style="text-align:center;font-size:1.3rem;padding:6px 8px" maxlength="2" />
+          </div>
+          <div style="flex:1;min-width:180px">
+            <label class="text-sm text-muted" style="display:block;margin-bottom:4px">Name des Themas</label>
+            <input class="input" id="new-subject-name" placeholder="z.B. Spanisch, Kochen, Gitarre…" />
+          </div>
+          <button class="btn btn-primary" id="new-subject-create">Erstellen</button>
+        </div>
+        <div class="text-sm" id="new-subject-status" style="margin-top:10px;min-height:20px"></div>
+      </div>
+    </div>
+
     <!-- Video Settings -->
     <div class="panel" style="margin-bottom:24px">
       <div class="panel__header">

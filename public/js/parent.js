@@ -33,6 +33,7 @@ async function initParent() {
   await loadChildren();
   await loadVideoSettings();
   setupVideoSettingsSave();
+  setupSubjectsManager();
   hideLoader();
 }
 
@@ -77,11 +78,13 @@ async function loadChildren() {
         activeChildName = child.displayName;
         updateChildTitle();
         loadDashboard();
+        loadSubjectsForChild(activeChildId, activeChildName);
       }
     });
   }
 
   await loadDashboard();
+  await loadSubjectsForChild(activeChildId, activeChildName);
 }
 
 function updateChildTitle() {
@@ -488,6 +491,112 @@ async function loadVideoSettings() {
     document.getElementById('vs-duration').value  = data.video_duration || 'medium';
     document.getElementById('vs-language').value  = data.language || 'de';
   } catch {}
+}
+
+/* ─── Subjects Manager ─── */
+function setupSubjectsManager() {
+  document.getElementById('subjects-save').addEventListener('click', saveSubjects);
+  document.getElementById('new-subject-create').addEventListener('click', createSubject);
+}
+
+async function loadSubjectsForChild(childId, childName) {
+  const nameEl = document.getElementById('subjects-child-name');
+  if (nameEl) nameEl.textContent = childName || 'dein Kind';
+
+  const container = document.getElementById('subjects-list');
+  container.innerHTML = '<div class="text-sm text-muted">Lade Fächer…</div>';
+
+  try {
+    const res  = await fetch(`/api/manage-subjects?action=list&childId=${childId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Fehler');
+
+    container.innerHTML = '';
+    (data.subjects || []).forEach(subject => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .2s';
+      label.innerHTML = `
+        <input type="checkbox" data-id="${subject.id}" ${subject.active ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple)" />
+        <span style="font-size:1.1rem">${subject.emoji || '📖'}</span>
+        <span style="flex:1;font-size:.9rem">${subject.name}</span>
+      `;
+      label.querySelector('input').addEventListener('change', (e) => {
+        label.style.borderColor = e.target.checked ? 'var(--purple)' : 'var(--border)';
+      });
+      if (subject.active) label.style.borderColor = 'var(--purple)';
+      container.appendChild(label);
+    });
+  } catch (err) {
+    container.innerHTML = `<div class="text-sm" style="color:var(--pink)">Fehler: ${err.message}</div>`;
+  }
+}
+
+async function saveSubjects() {
+  if (!activeChildId) return;
+  const btn    = document.getElementById('subjects-save');
+  const status = document.getElementById('subjects-save-status');
+  btn.disabled    = true;
+  btn.textContent = 'Speichern…';
+  status.textContent = '';
+
+  const checked = [...document.querySelectorAll('#subjects-list input[type=checkbox]:checked')].map(el => el.dataset.id);
+
+  try {
+    const res  = await fetch('/api/manage-subjects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save-child-subjects', childId: activeChildId, subjectIds: checked })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Fehler');
+    status.textContent = '✅ Gespeichert!';
+    showToast('Fächer gespeichert!', 'success');
+  } catch (err) {
+    status.textContent = '❌ ' + err.message;
+    showToast('Fehler beim Speichern.', 'error');
+  }
+
+  btn.disabled    = false;
+  btn.textContent = 'Speichern';
+  setTimeout(() => { status.textContent = ''; }, 4000);
+}
+
+async function createSubject() {
+  if (!activeChildId) { showToast('Erst ein Kind auswählen.', 'error'); return; }
+  const nameEl   = document.getElementById('new-subject-name');
+  const emojiEl  = document.getElementById('new-subject-emoji');
+  const statusEl = document.getElementById('new-subject-status');
+  const btn      = document.getElementById('new-subject-create');
+
+  const name  = nameEl.value.trim();
+  const emoji = emojiEl.value.trim() || '📖';
+  if (!name) { statusEl.textContent = '⚠️ Bitte einen Namen eingeben.'; return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Erstellen…';
+  statusEl.textContent = '';
+
+  try {
+    const res  = await fetch('/api/manage-subjects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create-subject', name, emoji, addToChildId: activeChildId, parentId: parentCtx.user.id })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Fehler');
+
+    nameEl.value  = '';
+    emojiEl.value = '';
+    statusEl.textContent = `✅ "${name}" erstellt und hinzugefügt!`;
+    showToast(`Thema "${name}" erstellt! 🎉`, 'success');
+    await loadSubjectsForChild(activeChildId, activeChildName);
+  } catch (err) {
+    statusEl.textContent = '❌ ' + err.message;
+  }
+
+  btn.disabled    = false;
+  btn.textContent = 'Erstellen';
+  setTimeout(() => { statusEl.textContent = ''; }, 5000);
 }
 
 function setupVideoSettingsSave() {
