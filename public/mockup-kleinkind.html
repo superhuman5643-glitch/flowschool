@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowSchool — Kleinkind-Modus Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #fff8f0;
+      min-height: 100vh;
+    }
+
+    /* ── TOP NAV ── */
+    .top-bar {
+      background: linear-gradient(135deg, #ff8c42, #ffcc6a);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 0 0 28px 28px;
+      box-shadow: 0 4px 20px rgba(255,140,66,.3);
+    }
+    .top-bar__logo {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .stars-bar {
+      display: flex;
+      gap: 4px;
+      font-size: 1.4rem;
+    }
+    .avatar-circle {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── HOME SCREEN ── */
+    .greeting {
+      text-align: center;
+      padding: 32px 24px 16px;
+    }
+    .greeting__mascot {
+      font-size: 5rem;
+      display: block;
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-12px); }
+    }
+    .greeting__text {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #2d2d2d;
+      margin-top: 12px;
+      line-height: 1.3;
+    }
+    .greeting__sub {
+      font-size: 1.1rem;
+      color: #888;
+      margin-top: 6px;
+    }
+    .speak-btn {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      margin-left: 8px;
+      vertical-align: middle;
+      transition: transform .2s;
+    }
+    .speak-btn:active { transform: scale(1.3); }
+
+    .subjects-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      padding: 8px 20px 32px;
+    }
+    .subject-card {
+      background: #fff;
+      border-radius: 28px;
+      padding: 28px 16px 22px;
+      text-align: center;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+      cursor: pointer;
+      transition: transform .18s, box-shadow .18s;
+      border: 3px solid transparent;
+      position: relative;
+    }
+    .subject-card:active { transform: scale(.95); }
+    .subject-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,.13); }
+    .subject-card--animals { border-color: #ff8c42; background: linear-gradient(145deg,#fff8f2,#fff); }
+    .subject-card--colors  { border-color: #a78bfa; background: linear-gradient(145deg,#f5f3ff,#fff); }
+    .subject-card--numbers { border-color: #34d399; background: linear-gradient(145deg,#f0fdf8,#fff); }
+    .subject-card--letters { border-color: #60a5fa; background: linear-gradient(145deg,#eff6ff,#fff); }
+    .subject-card__emoji { font-size: 3.8rem; display: block; margin-bottom: 10px; }
+    .subject-card__name {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #2d2d2d;
+    }
+    .subject-card__stars {
+      margin-top: 8px;
+      font-size: 1rem;
+    }
+    .subject-card__speak {
+      position: absolute;
+      top: 10px; right: 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      opacity: .6;
+    }
+
+    /* ── LESSON SCREEN ── */
+    .lesson-header-kid {
+      background: linear-gradient(135deg, #a78bfa, #7c6aff);
+      padding: 20px 24px 28px;
+      border-radius: 0 0 32px 32px;
+      color: #fff;
+      text-align: center;
+    }
+    .lesson-header-kid__emoji { font-size: 4rem; }
+    .lesson-header-kid__title {
+      font-size: 1.7rem;
+      font-weight: 900;
+      margin-top: 8px;
+    }
+    .back-btn-kid {
+      position: absolute;
+      top: 18px; left: 18px;
+      background: rgba(255,255,255,.25);
+      border: none;
+      border-radius: 50%;
+      width: 44px; height: 44px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .lesson-body {
+      padding: 24px 20px;
+      position: relative;
+    }
+
+    /* Big image area */
+    .lesson-image {
+      width: 100%;
+      height: 220px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7rem;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    /* Text bubble with TTS */
+    .speak-bubble {
+      background: #fff;
+      border-radius: 20px;
+      padding: 18px 20px;
+      box-shadow: 0 3px 14px rgba(0,0,0,.08);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .speak-bubble__play {
+      flex-shrink: 0;
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #ff8c42, #ffcc6a);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      cursor: pointer;
+      box-shadow: 0 3px 12px rgba(255,140,66,.4);
+      border: none;
+      transition: transform .15s;
+    }
+    .speak-bubble__play:active { transform: scale(.9); }
+    .speak-bubble__play.playing {
+      background: linear-gradient(135deg, #34d399, #6ee7b7);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 3px 12px rgba(52,211,153,.4); }
+      50%      { box-shadow: 0 6px 22px rgba(52,211,153,.7); }
+    }
+    .speak-bubble__text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #2d2d2d;
+      line-height: 1.5;
+    }
+
+    /* Answer options — big tap buttons with images */
+    .answer-label {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #666;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .answers-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .answer-btn {
+      background: #fff;
+      border: 3px solid #e5e7eb;
+      border-radius: 22px;
+      padding: 20px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .18s;
+      font-family: 'Nunito', sans-serif;
+    }
+    .answer-btn:active { transform: scale(.94); }
+    .answer-btn__emoji { font-size: 3rem; display: block; margin-bottom: 8px; }
+    .answer-btn__text { font-size: 1.1rem; font-weight: 800; color: #2d2d2d; }
+    .answer-btn--correct {
+      border-color: #34d399;
+      background: linear-gradient(145deg, #f0fdf8, #fff);
+      box-shadow: 0 4px 18px rgba(52,211,153,.35);
+    }
+    .answer-btn--wrong {
+      border-color: #f87171;
+      background: linear-gradient(145deg, #fff5f5, #fff);
+    }
+
+    /* Progress dots */
+    .progress-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      transition: background .3s;
+    }
+    .dot.done { background: #34d399; }
+    .dot.active { background: #7c6aff; transform: scale(1.3); }
+
+    /* ── WIN SCREEN ── */
+    .win-screen {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .win-screen__emoji {
+      font-size: 6rem;
+      display: block;
+      animation: spin 1s ease-in-out;
+    }
+    @keyframes spin {
+      0% { transform: rotate(-20deg) scale(.8); }
+      60% { transform: rotate(10deg) scale(1.15); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+    .win-screen__title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: #2d2d2d;
+      margin: 16px 0 8px;
+    }
+    .win-screen__stars {
+      font-size: 2.5rem;
+      letter-spacing: 6px;
+      margin-bottom: 24px;
+    }
+    .confetti-row {
+      font-size: 2rem;
+      letter-spacing: 8px;
+      margin-bottom: 32px;
+      animation: shake .5s ease-in-out;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    /* ── BUTTONS ── */
+    .big-btn {
+      display: block;
+      width: 100%;
+      padding: 20px;
+      border-radius: 22px;
+      border: none;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      text-align: center;
+    }
+    .big-btn:active { transform: scale(.97); }
+    .big-btn--primary {
+      background: linear-gradient(135deg, #7c6aff, #a78bfa);
+      color: #fff;
+      box-shadow: 0 6px 22px rgba(124,106,255,.4);
+    }
+    .big-btn--orange {
+      background: linear-gradient(135deg, #ff8c42, #ffcc6a);
+      color: #fff;
+      box-shadow: 0 6px 22px rgba(255,140,66,.35);
+    }
+    .big-btn--green {
+      background: linear-gradient(135deg, #34d399, #6ee7b7);
+      color: #fff;
+      box-shadow: 0 6px 22px rgba(52,211,153,.35);
+    }
+
+    /* ── SCREEN LABELS (mockup only) ── */
+    .screen-label {
+      text-align: center;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: #ccc;
+      text-transform: uppercase;
+      padding: 10px 0 4px;
+    }
+
+    /* ── PHONE FRAME ── */
+    .phones-row {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 40px 20px 60px;
+      background: #f0edfb;
+      min-height: 100vh;
+    }
+    .phone-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .phone-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: .85rem;
+      font-weight: 800;
+      color: #7c6aff;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .phone {
+      width: 320px;
+      background: #fff8f0;
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 8px #1a1a26,
+        0 0 0 11px #2d2d3a,
+        0 24px 60px rgba(0,0,0,.35);
+      position: relative;
+    }
+    /* notch */
+    .phone::before {
+      content: '';
+      position: absolute;
+      top: 10px; left: 50%;
+      transform: translateX(-50%);
+      width: 80px; height: 22px;
+      background: #1a1a26;
+      border-radius: 12px;
+      z-index: 10;
+    }
+    .phone-inner {
+      overflow-y: auto;
+      max-height: 640px;
+      padding-top: 36px; /* space for notch */
+    }
+
+    /* Mascot speaking animation */
+    .mascot-speaking { animation: mascot-talk .4s ease-in-out infinite alternate; }
+    @keyframes mascot-talk {
+      from { transform: scale(1); }
+      to   { transform: scale(1.08) rotate(3deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="phones-row">
+
+  <!-- ══ PHONE 1: HOME / THEMEN ══ -->
+  <div class="phone-wrap">
+    <div class="phone-label">📱 Startseite</div>
+    <div class="phone">
+      <div class="phone-inner">
+        <!-- Top bar -->
+        <div class="top-bar">
+          <div class="top-bar__logo">🌟 FlowSchool</div>
+          <div class="stars-bar">⭐⭐⭐</div>
+          <div class="avatar-circle">🐻</div>
+        </div>
+
+        <!-- Greeting -->
+        <div class="greeting">
+          <span class="greeting__mascot" id="mascot1">🦁</span>
+          <div class="greeting__text">
+            Hallo Lenny! 👋
+            <button class="speak-btn" onclick="speakText('Hallo Lenny! Was möchtest du heute lernen?', 'mascot1')">🔊</button>
+          </div>
+          <div class="greeting__sub">Was lernst du heute?</div>
+        </div>
+
+        <!-- Subject cards -->
+        <div class="subjects-grid">
+          <div class="subject-card subject-card--animals" onclick="showScreen('lesson')">
+            <span class="subject-card__speak">🔊</span>
+            <span class="subject-card__emoji">🐘</span>
+            <div class="subject-card__name">Tiere</div>
+            <div class="subject-card__stars">⭐⭐☆☆☆</div>
+          </div>
+          <div class="subject-card subject-card--colors">
+            <span class="subject-card__speak">🔊</span>
+            <span class="subject-card__emoji">🎨</span>
+            <div class="subject-card__name">Farben</div>
+            <div class="subject-card__stars">⭐⭐⭐☆☆</div>
+          </div>
+          <div class="subject-card subject-card--numbers">
+            <span class="subject-card__speak">🔊</span>
+            <span class="subject-card__emoji">🔢</span>
+            <div class="subject-card__name">Zahlen</div>
+            <div class="subject-card__stars">⭐☆☆☆☆</div>
+          </div>
+          <div class="subject-card subject-card--letters">
+            <span class="subject-card__speak">🔊</span>
+            <span class="subject-card__emoji">🔤</span>
+            <div class="subject-card__name">Buchstaben</div>
+            <div class="subject-card__stars">⭐⭐⭐⭐☆</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PHONE 2: LEKTION ══ -->
+  <div class="phone-wrap">
+    <div class="phone-label">📖 Lektion</div>
+    <div class="phone">
+      <div class="phone-inner">
+        <!-- Header -->
+        <div class="lesson-header-kid" style="position:relative">
+          <button class="back-btn-kid">←</button>
+          <div class="lesson-header-kid__emoji">🐘</div>
+          <div class="lesson-header-kid__title">Der Elefant</div>
+        </div>
+
+        <!-- Progress dots -->
+        <div style="padding:16px 20px 0">
+          <div class="progress-dots">
+            <div class="dot done"></div>
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+
+        <div class="lesson-body">
+          <!-- Big illustration -->
+          <div class="lesson-image">🐘</div>
+
+          <!-- Speak bubble -->
+          <div class="speak-bubble">
+            <button class="speak-bubble__play" id="play1" onclick="togglePlay('play1', 'Elefanten sind die größten Landtiere der Welt. Sie haben einen langen Rüssel, mit dem sie Wasser trinken und Dinge greifen können.')">
+              🔊
+            </button>
+            <div class="speak-bubble__text">
+              Elefanten sind die <strong>größten Landtiere</strong> der Welt! Mit ihrem langen Rüssel trinken sie Wasser. 🌊
+            </div>
+          </div>
+
+          <!-- Answer question -->
+          <div class="answer-label">Womit trinkt der Elefant? 🤔</div>
+          <div class="answers-grid">
+            <div class="answer-btn" onclick="selectAnswer(this, false)">
+              <span class="answer-btn__emoji">👄</span>
+              <span class="answer-btn__text">Mund</span>
+            </div>
+            <div class="answer-btn answer-btn--correct" onclick="selectAnswer(this, true)">
+              <span class="answer-btn__emoji">🐘</span>
+              <span class="answer-btn__text">Rüssel ✅</span>
+            </div>
+            <div class="answer-btn" onclick="selectAnswer(this, false)">
+              <span class="answer-btn__emoji">🦶</span>
+              <span class="answer-btn__text">Fuß</span>
+            </div>
+            <div class="answer-btn" onclick="selectAnswer(this, false)">
+              <span class="answer-btn__emoji">👂</span>
+              <span class="answer-btn__text">Ohr</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PHONE 3: BELOHNUNG ══ -->
+  <div class="phone-wrap">
+    <div class="phone-label">🏆 Belohnung</div>
+    <div class="phone">
+      <div class="phone-inner">
+        <div style="background:linear-gradient(135deg,#7c6aff,#ff6a9e);padding:20px 0 30px;border-radius:0 0 32px 32px"></div>
+
+        <div class="win-screen">
+          <span class="win-screen__emoji">🏆</span>
+          <div class="win-screen__title">Super gemacht!</div>
+          <div class="win-screen__stars">⭐⭐⭐</div>
+          <div class="confetti-row">🎉🎊🎈🎉🎊</div>
+
+          <div style="background:#fff;border-radius:24px;padding:20px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.08)">
+            <div style="font-size:3rem;margin-bottom:8px">🐘</div>
+            <div style="font-size:1.1rem;font-weight:800;color:#2d2d2d">Du kennst jetzt den Elefanten!</div>
+            <div style="font-size:.9rem;color:#888;margin-top:4px">+3 Sterne gesammelt ✨</div>
+          </div>
+
+          <button class="big-btn big-btn--orange" style="margin-bottom:12px" onclick="speakText('Weiter so! Du lernst super! Möchtest du noch ein Tier kennenlernen?')">
+            🔊 Weiter so! Nächstes Tier →
+          </button>
+          <button class="big-btn big-btn--primary">
+            🏠 Zurück zur Übersicht
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function speakText(text, mascotId) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'de-DE';
+    utt.rate = 0.85;
+    utt.pitch = 1.1;
+
+    if (mascotId) {
+      const el = document.getElementById(mascotId);
+      if (el) {
+        el.classList.add('mascot-speaking');
+        utt.onend = () => el.classList.remove('mascot-speaking');
+      }
+    }
+    window.speechSynthesis.speak(utt);
+  }
+
+  function togglePlay(btnId, text) {
+    const btn = document.getElementById(btnId);
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      document.querySelectorAll('.speak-bubble__play').forEach(b => {
+        b.classList.remove('playing');
+        b.textContent = '🔊';
+      });
+      return;
+    }
+    btn.classList.add('playing');
+    btn.textContent = '🔈';
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'de-DE';
+    utt.rate = 0.85;
+    utt.pitch = 1.1;
+    utt.onend = () => {
+      btn.classList.remove('playing');
+      btn.textContent = '🔊';
+    };
+    window.speechSynthesis.speak(utt);
+  }
+
+  function selectAnswer(el, correct) {
+    if (correct) {
+      speakText('Richtig! Super gemacht! 🎉');
+    } else {
+      speakText('Das war leider falsch. Versuch es nochmal!');
+      el.classList.add('answer-btn--wrong');
+      setTimeout(() => el.classList.remove('answer-btn--wrong'), 800);
+    }
+  }
+
+  // Auto-speak greeting on load
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      speakText('Hallo Lenny! Was möchtest du heute lernen?', 'mascot1');
+    }, 800);
+  });
+</script>
+</body>
+</html>
