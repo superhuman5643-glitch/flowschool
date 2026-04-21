@@ -162,9 +162,23 @@ async function fetchBreakVideo() {
       state.breakPlayer = new YT.Player('break-yt-player', {
         videoId,
         width: '100%', height: '100%',
-        playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
+        playerVars: {
+          rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1,
+          controls: 0,       // hide ALL YouTube chrome
+          disablekb: 1,
+          fs: 0,
+          iv_load_policy: 3,
+          cc_load_policy: 0
+        },
         events: {
+          onReady: (e) => { setupBreakControls(e.target); },
           onStateChange: (e) => {
+            // Sync play/pause button
+            const ppBtn = document.getElementById('break-playpause');
+            if (ppBtn) {
+              if (e.data === YT.PlayerState.PLAYING) ppBtn.textContent = '⏸ Pause';
+              else if (e.data === YT.PlayerState.PAUSED) ppBtn.textContent = '▶️ Play';
+            }
             if (e.data === YT.PlayerState.ENDED) { showCheckin(); return; }
             // Prevent seeking in break video too
             const bp = state.breakPlayer;
@@ -183,6 +197,51 @@ async function fetchBreakVideo() {
   } catch {
     document.getElementById('break-video-status').textContent = 'Video konnte nicht geladen werden.';
     setTimeout(showCheckin, 60000);
+  }
+}
+
+function setupBreakControls(player) {
+  // Overlay: blocks all YouTube links, click = toggle play/pause
+  const container = document.getElementById('break-video-container');
+  if (container && !container.querySelector('#break-yt-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'break-yt-overlay';
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:10;cursor:pointer';
+    overlay.addEventListener('click', () => {
+      try {
+        const s = player.getPlayerState();
+        if (s === YT.PlayerState.PLAYING) { player.pauseVideo(); }
+        else { player.playVideo(); }
+      } catch {}
+    });
+    container.appendChild(overlay);
+  }
+
+  // Show break custom controls
+  const bar = document.getElementById('break-custom-controls');
+  if (bar) bar.style.display = 'flex';
+
+  // Play/Pause
+  const ppBtn = document.getElementById('break-playpause');
+  if (ppBtn) {
+    ppBtn.addEventListener('click', () => {
+      try {
+        const s = player.getPlayerState();
+        if (s === YT.PlayerState.PLAYING) { player.pauseVideo(); ppBtn.textContent = '▶️ Play'; }
+        else { player.playVideo(); ppBtn.textContent = '⏸ Pause'; }
+      } catch {}
+    });
+  }
+
+  // Mute
+  const muteBtn = document.getElementById('break-mute');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      try {
+        if (player.isMuted()) { player.unMute(); muteBtn.textContent = '🔊 Ton an'; }
+        else { player.mute(); muteBtn.textContent = '🔇 Ton aus'; }
+      } catch {}
+    });
   }
 }
 
@@ -399,14 +458,77 @@ function activateYTPlayer(videoId) {
     state.youtubePlayer = new YT.Player('yt-player', {
       videoId,
       width: '100%', height: '100%',
-      playerVars: { rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1 },
+      playerVars: {
+        rel: 0, modestbranding: 1, autoplay: 1, playsinline: 1,
+        controls: 0,       // hide ALL YouTube chrome (logo, title, links)
+        disablekb: 1,      // disable keyboard shortcuts → no escape to YouTube
+        fs: 0,             // no fullscreen button
+        iv_load_policy: 3, // no annotations
+        cc_load_policy: 0  // no auto-captions overlay
+      },
       events: {
-        onReady: () => { state.ytCheckInterval = setInterval(updateVideoProgress, 500); },
+        onReady: (e) => {
+          state.ytCheckInterval = setInterval(updateVideoProgress, 500);
+          setupVideoControls(e.target);
+        },
         onStateChange: onYTStateChange
       }
     });
   };
   tryCreate();
+}
+
+function setupVideoControls(player) {
+  // Overlay: intercepts ALL clicks → routes to play/pause, blocks every YouTube link
+  const wrapper = document.getElementById('video-wrapper');
+  if (!wrapper.querySelector('#yt-overlay')) {
+    const overlay = document.createElement('div');
+    overlay.id = 'yt-overlay';
+    overlay.style.cssText = 'position:absolute;inset:0;z-index:10;cursor:pointer';
+    overlay.addEventListener('click', () => {
+      try {
+        const s = player.getPlayerState();
+        if (s === YT.PlayerState.PLAYING) { player.pauseVideo(); }
+        else { player.playVideo(); }
+      } catch {}
+    });
+    wrapper.appendChild(overlay);
+  }
+
+  // Show custom controls bar
+  const bar = document.getElementById('video-custom-controls');
+  if (bar) bar.style.display = 'flex';
+
+  // Play/Pause button
+  const ppBtn = document.getElementById('yt-playpause');
+  if (ppBtn) {
+    ppBtn.addEventListener('click', () => {
+      try {
+        const s = player.getPlayerState();
+        if (s === YT.PlayerState.PLAYING) { player.pauseVideo(); ppBtn.textContent = '▶️ Play'; }
+        else { player.playVideo(); ppBtn.textContent = '⏸ Pause'; }
+      } catch {}
+    });
+  }
+
+  // Mute button
+  const muteBtn = document.getElementById('yt-mute');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      try {
+        if (player.isMuted()) { player.unMute(); muteBtn.textContent = '🔊 Ton an'; }
+        else { player.mute(); muteBtn.textContent = '🔇 Ton aus'; }
+      } catch {}
+    });
+  }
+
+  // Sync play/pause button with actual player state
+  const origStateChange = window._origYTStateChange;
+  player.addEventListener('onStateChange', (e) => {
+    if (!ppBtn) return;
+    if (e.data === YT.PlayerState.PLAYING) ppBtn.textContent = '⏸ Pause';
+    else if (e.data === YT.PlayerState.PAUSED) ppBtn.textContent = '▶️ Play';
+  });
 }
 
 function onYTStateChange(event) {
@@ -457,15 +579,6 @@ function updateVideoProgress(playerArg) {
 
   if (pct >= 90 && !state.videoDone) {
     state.videoDone = true;
-    // Overlay blocks all YouTube link clicks (suggestions, channel, etc.) — video keeps playing
-    const wrapper = document.getElementById('video-wrapper');
-    if (wrapper && !wrapper.querySelector('#yt-overlay')) {
-      const overlay = document.createElement('div');
-      overlay.id = 'yt-overlay';
-      overlay.style.cssText = 'position:absolute;inset:0;z-index:10;cursor:default';
-      overlay.addEventListener('click', e => e.preventDefault());
-      wrapper.appendChild(overlay);
-    }
     document.getElementById('video-hint').textContent = '✅ Video vollständig geschaut!';
     document.getElementById('video-hint').style.color = 'var(--green)';
     checkContinueUnlock();
