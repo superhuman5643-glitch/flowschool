@@ -507,7 +507,10 @@ async function loadSubjectsForChild(childId, childName) {
   container.innerHTML = '<div class="text-sm text-muted">Lade Fächer…</div>';
 
   try {
-    const res  = await fetch(`/api/manage-subjects?action=list&childId=${childId}`);
+    const res  = await fetch('/api/onboarding', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'list-subjects', childId })
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Fehler');
 
@@ -542,7 +545,7 @@ async function saveSubjects() {
   const checked = [...document.querySelectorAll('#subjects-list input[type=checkbox]:checked')].map(el => el.dataset.id);
 
   try {
-    const res  = await fetch('/api/manage-subjects', {
+    const res  = await fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'save-child-subjects', childId: activeChildId, subjectIds: checked })
@@ -577,7 +580,7 @@ async function createSubject() {
   statusEl.textContent = '';
 
   try {
-    const res  = await fetch('/api/manage-subjects', {
+    const res  = await fetch('/api/onboarding', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create-subject', name, emoji, addToChildId: activeChildId, parentId: parentCtx.user.id })
