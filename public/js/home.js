@@ -111,20 +111,24 @@ async function loadSubjects(sb, userId) {
     if (completedIds.has(l.id)) progressBySubject[l.subject_id].done++;
   });
 
-  // ── Daily gate ──
-  const todayISO = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+  // ── Freilektion-Bank (persistent, resets never) ──
+  // Each completed core lesson earns 1 token. Each completed extra lesson spends 1 token.
+  // Unused tokens carry over indefinitely — never lost overnight.
   const mandatorySubjectIds = new Set((mandatory || []).map(s => s.id));
   const mandatoryLessonIds  = new Set((allLessons || []).filter(l => mandatorySubjectIds.has(l.subject_id)).map(l => l.id));
   const optionalLessonIds   = new Set((allLessons || []).filter(l => !mandatorySubjectIds.has(l.subject_id)).map(l => l.id));
 
-  const todayDone = new Set(
-    (allProgress || []).filter(p => p.completed && p.completed_at >= todayISO).map(p => p.lesson_id)
-  );
-  const coreDoneToday = [...todayDone].filter(id => mandatoryLessonIds.has(id)).length;
+  const completedProgress   = (allProgress || []).filter(p => p.completed);
+  const coreCompletedEver   = completedProgress.filter(p => mandatoryLessonIds.has(p.lesson_id)).length;
+  const extraCompletedEver  = completedProgress.filter(p => optionalLessonIds.has(p.lesson_id)).length;
+  let slotsRemaining        = Math.max(0, coreCompletedEver - extraCompletedEver);
+
+  // Still track "visited today" so re-entering the same extra subject today is free
+  const todayISO = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+  const todayDone = new Set(completedProgress.filter(p => p.completed_at >= todayISO).map(p => p.lesson_id));
   const extraSubjectsDoneToday = new Set(
     (allLessons || []).filter(l => optionalLessonIds.has(l.id) && todayDone.has(l.id)).map(l => l.subject_id)
   );
-  let slotsRemaining = coreDoneToday - extraSubjectsDoneToday.size;
 
   // ── Render Kernfächer ──
   const kernGrid = document.getElementById('kernfaecher-grid');
@@ -146,19 +150,22 @@ async function loadSubjects(sb, userId) {
     extrasSection.classList.remove('hidden');
     extrasGrid.innerHTML = '';
 
-    if (coreDoneToday === 0) {
+    if (slotsRemaining === 0 && extraSubjectsDoneToday.size === 0) {
       gateLabel.textContent = '🔒 heute gesperrt';
       gateNotice.classList.remove('hidden');
     } else {
-      gateLabel.textContent = `${extraSubjectsDoneToday.size}/${coreDoneToday} heute genutzt`;
+      const label = slotsRemaining > 0
+        ? `🎟️ ${slotsRemaining} Freilektion${slotsRemaining !== 1 ? 'en' : ''} verfügbar`
+        : `🎟️ ${extraSubjectsDoneToday.size} heute genutzt`;
+      gateLabel.textContent = label;
       gateNotice.classList.add('hidden');
     }
 
     optional.forEach((subject, i) => {
-      const doneToday = extraSubjectsDoneToday.has(subject.id);
+      const visitedToday = extraSubjectsDoneToday.has(subject.id);
       let locked = false;
-      if (!doneToday) {
-        if (coreDoneToday === 0 || slotsRemaining <= 0) {
+      if (!visitedToday) {
+        if (slotsRemaining <= 0) {
           locked = true;
         } else {
           slotsRemaining--;
@@ -222,7 +229,7 @@ function buildSubjectCard(subject, i, progressBySubject, stickersBySubject, leve
   `;
 
   if (locked) {
-    card.addEventListener('click', () => showToast('Mach erst eine Kernfach-Lektion — dann wird dieser Extra freigeschaltet! 💪', 'error'));
+    card.addEventListener('click', () => showToast('Du hast keine Freilektionen mehr 🎟️ — mach eine Kernfach-Lektion um neue zu verdienen! 💪', 'error'));
   } else {
     card.addEventListener('click', () => showLessons(sb, userId, subject));
   }
