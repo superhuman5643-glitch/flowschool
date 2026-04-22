@@ -313,7 +313,7 @@ async function loadLearningReport(sb, lennyId) {
   const [profileRes, chatRes, sessionRes, progressRes] = await Promise.all([
     sb.from('child_profiles').select('*').eq('user_id', lennyId).maybeSingle(),
     sb.from('chat_messages').select('id, created_at').eq('user_id', lennyId),
-    sb.from('sessions').select('start_time, breaks_taken').eq('user_id', lennyId).order('start_time', { ascending: false }),
+    sb.from('sessions').select('start_time, breaks_taken, break_motion').eq('user_id', lennyId).order('start_time', { ascending: false }),
     sb.from('progress').select('completed_at, time_spent_seconds').eq('user_id', lennyId).eq('completed', true)
   ]);
 
@@ -417,7 +417,7 @@ async function loadLearningReport(sb, lennyId) {
 async function loadStreak(sb, lennyId) {
   // Fetch sessions AND completed progress (with lesson info) for day-detail
   const [sessionRes, progressRes] = await Promise.all([
-    sb.from('sessions').select('start_time').eq('user_id', lennyId),
+    sb.from('sessions').select('start_time, breaks_taken, break_motion').eq('user_id', lennyId),
     sb.from('progress')
       .select('completed_at, time_spent_seconds, lessons(title, subjects(name, emoji))')
       .eq('user_id', lennyId)
@@ -425,9 +425,17 @@ async function loadStreak(sb, lennyId) {
       .order('completed_at', { ascending: false })
   ]);
 
-  const activeDates = new Set(
-    (sessionRes.data || []).map(s => s.start_time?.split('T')[0]).filter(Boolean)
-  );
+  const sessions    = sessionRes.data || [];
+  const activeDates = new Set(sessions.map(s => s.start_time?.split('T')[0]).filter(Boolean));
+
+  // Group sessions by date for motion data
+  const sessionByDate = {};
+  sessions.forEach(s => {
+    if (!s.start_time) return;
+    const d = s.start_time.split('T')[0];
+    if (!sessionByDate[d]) sessionByDate[d] = [];
+    sessionByDate[d].push(s);
+  });
 
   // Group progress by date (local date from UTC timestamp)
   const progressByDate = {};
@@ -468,7 +476,7 @@ async function loadStreak(sb, lennyId) {
     cell.dataset.date = key;
 
     if (active) {
-      cell.addEventListener('click', () => showDayDetail(key, progressByDate[key] || [], cell));
+      cell.addEventListener('click', () => showDayDetail(key, progressByDate[key] || [], sessionByDate[key] || [], cell));
     }
 
     grid.appendChild(cell);
@@ -482,7 +490,7 @@ function formatDateLabel(dateStr) {
   return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-function showDayDetail(dateStr, items, clickedCell) {
+function showDayDetail(dateStr, items, daySessions, clickedCell) {
   // Deselect previous
   document.querySelectorAll('.streak-day.selected').forEach(c => c.classList.remove('selected'));
   clickedCell.classList.add('selected');
@@ -490,7 +498,7 @@ function showDayDetail(dateStr, items, clickedCell) {
   // Remove existing detail panel
   const existing = document.getElementById('day-detail-panel');
   if (existing) {
-    if (existing.dataset.date === dateStr) { existing.remove(); return; } // toggle off
+    if (existing.dataset.date === dateStr) { existing.remove(); return; }
     existing.remove();
   }
 
@@ -503,6 +511,21 @@ function showDayDetail(dateStr, items, clickedCell) {
   const timeStr   = totalSecs >= 3600
     ? (totalSecs / 3600).toFixed(1) + 'h'
     : Math.round(totalSecs / 60) + ' Min';
+
+  // Collect motion scores from all sessions that day
+  const allMotionScores = daySessions.flatMap(s => Array.isArray(s.break_motion) ? s.break_motion : []);
+  const motionHtml = allMotionScores.length > 0
+    ? `<div class="day-detail__item" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px">
+        <span>📷</span>
+        <span style="font-weight:600">Bewegungserkennung</span>
+        <span class="day-detail__time" style="display:flex;gap:6px;align-items:center">
+          ${allMotionScores.map((sc, i) => {
+            const emoji = sc >= 70 ? '🏃' : sc >= 40 ? '🚶' : '🪑';
+            return `<span title="Pause ${i+1}">${emoji} ${sc}%</span>`;
+          }).join(' · ')}
+        </span>
+      </div>`
+    : '';
 
   panel.innerHTML = `
     <div class="day-detail__date">📅 ${formatDateLabel(dateStr)} · ⏱ ${timeStr}</div>
@@ -519,9 +542,9 @@ function showDayDetail(dateStr, items, clickedCell) {
           </div>`;
         }).join('')
     }
+    ${motionHtml}
   `;
 
-  // Insert after streak grid's parent panel body
   const streakPanel = clickedCell.closest('.panel');
   streakPanel.querySelector('.panel__body').appendChild(panel);
 }

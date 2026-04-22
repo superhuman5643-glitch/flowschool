@@ -26,8 +26,8 @@ let state = {
   breakActive: false,
   breakCountdown: BREAK_DUR_S,
   activeMs: 0,
-  breakBaseMs: 0,    // activeMs when last break ended (for next-break timing)
-  lessonStartMs: 0,  // activeMs when current lesson page loaded (for per-lesson time)
+  breakBaseMs: 0,
+  lessonStartMs: 0,
   activeInterval: null,
   breakInterval: null,
   youtubePlayer: null,
@@ -35,7 +35,14 @@ let state = {
   seekLockUntil: null,
   sessionId: null,
   currentRec: null,
-  currentRecIndex: null
+  currentRecIndex: null,
+  // Motion detection
+  motionStream: null,
+  motionInterval: null,
+  motionPrevFrame: null,
+  motionActiveSeconds: 0,
+  motionTotalSeconds: 0,
+  motionScores: []          // score per break this session
 };
 
 async function initLesson() {
@@ -141,8 +148,111 @@ function startBreak() {
     try { state.youtubePlayer.pauseVideo(); } catch {}
   }
 
+  // Reset motion state for this break
+  state.motionActiveSeconds = 0;
+  state.motionTotalSeconds  = 0;
+  state.motionPrevFrame     = null;
+
+  // Wire up activate button
+  const activateBtn = document.getElementById('motion-activate-btn');
+  if (activateBtn) {
+    const newBtn = activateBtn.cloneNode(true);
+    activateBtn.replaceWith(newBtn);
+    newBtn.addEventListener('click', () => { newBtn.style.display = 'none'; startMotionDetection(); });
+  }
+
   fetchBreakVideo();
   setupCheckin();
+}
+
+/* ─── Motion detection ─── */
+async function startMotionDetection() {
+  const box = document.getElementById('motion-box');
+  if (!box) return;
+
+  try {
+    state.motionStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 160 }, height: { ideal: 120 }, facingMode: 'user' },
+      audio: false
+    });
+
+    const videoEl = document.getElementById('motion-video-preview');
+    videoEl.srcObject = state.motionStream;
+    box.style.display = 'block';
+
+    const canvas = document.getElementById('motion-canvas');
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+    videoEl.onloadedmetadata = () => {
+      document.getElementById('motion-indicator').textContent = '👀 Ich schaue…';
+      state.motionInterval = setInterval(() => {
+        if (videoEl.readyState < 2) return;
+        ctx.drawImage(videoEl, 0, 0, 80, 60);
+        const frame = ctx.getImageData(0, 0, 80, 60).data;
+
+        state.motionTotalSeconds++;
+
+        if (state.motionPrevFrame) {
+          let diff = 0;
+          for (let i = 0; i < frame.length; i += 4) {
+            const cur  = frame[i]  * 0.299 + frame[i+1]  * 0.587 + frame[i+2]  * 0.114;
+            const prev = state.motionPrevFrame[i] * 0.299 + state.motionPrevFrame[i+1] * 0.587 + state.motionPrevFrame[i+2] * 0.114;
+            if (Math.abs(cur - prev) > 22) diff++;
+          }
+          const moving = diff / (80 * 60) > 0.03; // >3% pixels changed
+          if (moving) state.motionActiveSeconds++;
+
+          const pct = state.motionTotalSeconds > 0
+            ? Math.round((state.motionActiveSeconds / state.motionTotalSeconds) * 100) : 0;
+
+          const ind = document.getElementById('motion-indicator');
+          const fill = document.getElementById('motion-fill');
+          const label = document.getElementById('motion-pct-label');
+          if (ind)   ind.innerHTML   = moving
+            ? '<span style="color:#34d399;font-weight:800">🟢 Bewegung erkannt!</span>'
+            : '<span style="color:rgba(255,255,255,.5)">⚪ Keine Bewegung</span>';
+          if (fill)  fill.style.width = pct + '%';
+          if (label) label.textContent = pct + '% der Pause bewegt';
+        }
+
+        state.motionPrevFrame = new Uint8ClampedArray(frame);
+      }, 800);
+    };
+  } catch {
+    const box = document.getElementById('motion-box');
+    if (box) {
+      box.style.display = 'block';
+      box.innerHTML = '<div style="padding:10px;font-size:.82rem;color:rgba(255,255,255,.5);text-align:center">📷 Kein Kamerazugriff — kein Problem!</div>';
+    }
+  }
+}
+
+function stopMotionDetection() {
+  if (state.motionInterval)  { clearInterval(state.motionInterval); state.motionInterval = null; }
+  if (state.motionStream)    { state.motionStream.getTracks().forEach(t => t.stop()); state.motionStream = null; }
+  state.motionPrevFrame = null;
+
+  const score = state.motionTotalSeconds > 0
+    ? Math.round((state.motionActiveSeconds / state.motionTotalSeconds) * 100)
+    : null;
+
+  if (score !== null) state.motionScores.push(score);
+
+  // Save scores to session in DB
+  if (state.sessionId && state.motionScores.length) {
+    state.sb.from('sessions')
+      .update({ break_motion: state.motionScores })
+      .eq('id', state.sessionId)
+      .then(() => {}).catch(() => {});
+  }
+
+  // Hide UI
+  const box = document.getElementById('motion-box');
+  if (box) box.style.display = 'none';
+  const activateBtn = document.getElementById('motion-activate-btn');
+  if (activateBtn) { activateBtn.style.display = ''; }
+
+  return score;
 }
 
 async function fetchBreakVideo() {
@@ -345,8 +455,9 @@ function setupCheckin() {
 }
 
 function endBreak() {
-  // Don't reset activeMs — keep accumulating for correct time tracking.
-  // Instead, record where we are so the NEXT break triggers 25 min from now.
+  // Stop camera + get movement score
+  const motionScore = stopMotionDetection();
+
   state.breakBaseMs = state.activeMs;
   state.breakWarnShown = false;
   state.breakActive = false;
@@ -360,7 +471,7 @@ function endBreak() {
   document.getElementById('break-video-wrap').style.display = '';
   document.getElementById('break-video-status').style.display = '';
   document.getElementById('break-video-status').textContent = '⏳ Lade Bewegungsvideo…';
-  document.getElementById('break-video-container').innerHTML = '';   // removes overlay too
+  document.getElementById('break-video-container').innerHTML = '';
   const bcc = document.getElementById('break-custom-controls');
   if (bcc) bcc.style.display = 'none';
   document.getElementById('checkin-form').classList.add('hidden');
@@ -373,7 +484,13 @@ function endBreak() {
   document.querySelectorAll('.checkin-emojis button').forEach(b => b.classList.remove('selected'));
   document.getElementById('break-screen').classList.add('hidden');
 
-  showToast('Super! Weiter geht\'s! 💪', 'success');
+  // Toast with movement score if available
+  if (motionScore !== null) {
+    const emoji = motionScore >= 70 ? '🏃' : motionScore >= 40 ? '🚶' : '🪑';
+    showToast(`${emoji} Pause vorbei! Du hast dich ${motionScore}% der Zeit bewegt.`, 'success');
+  } else {
+    showToast('Super! Weiter geht\'s! 💪', 'success');
+  }
 }
 
 
