@@ -75,8 +75,10 @@ async function loadSubjects(sb, userId) {
     // Use parent-configured subjects (in their chosen order)
     const ids = childSubRows.map(r => r.subject_id);
     const { data: customSubjects } = await sb.from('subjects').select('*').in('id', ids);
-    mandatory = ids.map(id => (customSubjects || []).find(s => s.id === id)).filter(Boolean);
-    // No extras section when parent has configured subjects
+    const allConfigured = ids.map(id => (customSubjects || []).find(s => s.id === id)).filter(Boolean);
+    // Split: is_mandatory = true → Kernthemen, is_mandatory = false → Freiwillig
+    mandatory = allConfigured.filter(s => s.is_mandatory);
+    optional  = allConfigured.filter(s => !s.is_mandatory);
   } else {
     // Original fallback: use is_mandatory flag + unlocked_subjects
     const { data: mandatoryData } = await sb.from('subjects').select('*').eq('is_mandatory', true).order('sort_order');
