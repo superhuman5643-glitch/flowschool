@@ -306,41 +306,115 @@ async function loadSubjectProgress(sb, lennyId) {
 
 /* ─── Streak calendar ─── */
 async function loadStreak(sb, lennyId) {
-  const { data: sessions } = await sb
-    .from('sessions')
-    .select('start_time')
-    .eq('user_id', lennyId);
+  // Fetch sessions AND completed progress (with lesson info) for day-detail
+  const [sessionRes, progressRes] = await Promise.all([
+    sb.from('sessions').select('start_time').eq('user_id', lennyId),
+    sb.from('progress')
+      .select('completed_at, time_spent_seconds, lessons(title, subjects(name, emoji))')
+      .eq('user_id', lennyId)
+      .eq('completed', true)
+      .order('completed_at', { ascending: false })
+  ]);
 
   const activeDates = new Set(
-    (sessions || []).map(s => s.start_time?.split('T')[0]).filter(Boolean)
+    (sessionRes.data || []).map(s => s.start_time?.split('T')[0]).filter(Boolean)
   );
+
+  // Group progress by date (local date from UTC timestamp)
+  const progressByDate = {};
+  (progressRes.data || []).forEach(p => {
+    if (!p.completed_at) return;
+    const dateKey = p.completed_at.split('T')[0];
+    if (!progressByDate[dateKey]) progressByDate[dateKey] = [];
+    progressByDate[dateKey].push(p);
+  });
 
   const grid = document.getElementById('streak-grid');
   grid.innerHTML = '';
 
   const today = new Date();
-  let streak  = 0;
-  let counting = true;
+  const todayKey = today.toISOString().split('T')[0];
 
-  for (let i = 27; i >= 0; i--) {
-    const d    = new Date(today);
+  // Calculate streak: count consecutive active days from today backwards
+  let streak = 0;
+  for (let i = 0; i <= 27; i++) {
+    const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key  = d.toISOString().split('T')[0];
-    const isToday = i === 0;
-    const active  = activeDates.has(key);
+    const key = d.toISOString().split('T')[0];
+    if (activeDates.has(key)) { streak++; }
+    else { break; }
+  }
 
-    if (counting) {
-      if (active || isToday) { if (active) streak++; }
-      else { counting = false; }
-    }
+  // Render grid (oldest → newest, left to right)
+  for (let i = 27; i >= 0; i--) {
+    const d       = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key     = d.toISOString().split('T')[0];
+    const isToday = key === todayKey;
+    const active  = activeDates.has(key);
 
     const cell = document.createElement('div');
     cell.className = `streak-day${active ? ' active' : ''}${isToday ? ' today' : ''}`;
-    cell.title = key;
+    cell.title = formatDateLabel(key);
+    cell.dataset.date = key;
+
+    if (active) {
+      cell.addEventListener('click', () => showDayDetail(key, progressByDate[key] || [], cell));
+    }
+
     grid.appendChild(cell);
   }
 
   document.getElementById('streak-count').textContent = streak;
+}
+
+function formatDateLabel(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function showDayDetail(dateStr, items, clickedCell) {
+  // Deselect previous
+  document.querySelectorAll('.streak-day.selected').forEach(c => c.classList.remove('selected'));
+  clickedCell.classList.add('selected');
+
+  // Remove existing detail panel
+  const existing = document.getElementById('day-detail-panel');
+  if (existing) {
+    if (existing.dataset.date === dateStr) { existing.remove(); return; } // toggle off
+    existing.remove();
+  }
+
+  const panel = document.createElement('div');
+  panel.className = 'day-detail';
+  panel.id = 'day-detail-panel';
+  panel.dataset.date = dateStr;
+
+  const totalSecs = items.reduce((s, p) => s + (p.time_spent_seconds || 0), 0);
+  const timeStr   = totalSecs >= 3600
+    ? (totalSecs / 3600).toFixed(1) + 'h'
+    : Math.round(totalSecs / 60) + ' Min';
+
+  panel.innerHTML = `
+    <div class="day-detail__date">📅 ${formatDateLabel(dateStr)} · ⏱ ${timeStr}</div>
+    ${items.length === 0
+      ? '<div class="text-sm text-muted">Keine abgeschlossenen Lektionen an diesem Tag.</div>'
+      : items.map(p => {
+          const lesson  = p.lessons;
+          const subject = lesson?.subjects;
+          const mins    = p.time_spent_seconds ? Math.round(p.time_spent_seconds / 60) + ' Min' : '';
+          return `<div class="day-detail__item">
+            <span>${subject?.emoji || '📖'}</span>
+            <span>${subject?.name ? subject.name + ' — ' : ''}${lesson?.title || 'Lektion'}</span>
+            <span class="day-detail__time">${mins}</span>
+          </div>`;
+        }).join('')
+    }
+  `;
+
+  // Insert after streak grid's parent panel body
+  const streakPanel = clickedCell.closest('.panel');
+  streakPanel.querySelector('.panel__body').appendChild(panel);
 }
 
 /* ─── Surprise alert ─── */
