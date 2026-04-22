@@ -452,9 +452,12 @@ async function loadStreak(sb, lennyId) {
   const today = new Date();
   const todayKey = today.toISOString().split('T')[0];
 
-  // Calculate streak: count consecutive active days from today backwards
+  // Calculate streak: count consecutive active days backwards.
+  // If today has no session yet, start from yesterday (benefit of the doubt —
+  // the day isn't over). Streak only resets to 0 when yesterday + today are both missing.
   let streak = 0;
-  for (let i = 0; i <= 27; i++) {
+  const startOffset = activeDates.has(todayKey) ? 0 : 1;
+  for (let i = startOffset; i <= 27; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = d.toISOString().split('T')[0];
