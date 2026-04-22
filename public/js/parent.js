@@ -264,7 +264,17 @@ async function loadQuestions(sb, lennyId, since) {
 
 /* ─── Subject progress ─── */
 async function loadSubjectProgress(sb, lennyId) {
-  const { data: subjects } = await sb.from('subjects').select('id, name, emoji').eq('is_default', true).order('sort_order');
+  // Use child's configured subjects (parent-assigned) — fallback to defaults
+  const { data: childSubRows } = await sb.from('child_subjects').select('subject_id').eq('user_id', lennyId);
+  let subjects;
+  if (childSubRows && childSubRows.length > 0) {
+    const ids = childSubRows.map(r => r.subject_id);
+    const { data } = await sb.from('subjects').select('id, name, emoji').in('id', ids).order('sort_order');
+    subjects = data;
+  } else {
+    const { data } = await sb.from('subjects').select('id, name, emoji').eq('is_default', true).order('sort_order');
+    subjects = data;
+  }
   const { data: lessons }  = await sb.from('lessons').select('id, subject_id');
   const { data: progress } = await sb.from('progress').select('lesson_id, completed').eq('user_id', lennyId).eq('completed', true);
 
