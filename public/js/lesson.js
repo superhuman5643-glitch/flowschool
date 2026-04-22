@@ -26,6 +26,8 @@ let state = {
   breakActive: false,
   breakCountdown: BREAK_DUR_S,
   activeMs: 0,
+  breakBaseMs: 0,    // activeMs when last break ended (for next-break timing)
+  lessonStartMs: 0,  // activeMs when current lesson page loaded (for per-lesson time)
   activeInterval: null,
   breakInterval: null,
   youtubePlayer: null,
@@ -62,11 +64,16 @@ async function initLesson() {
   const today = new Date().toISOString().split('T')[0];
   if (savedDate !== today) {
     localStorage.setItem(LS_ACTIVE_KEY, '0');
+    localStorage.setItem('fs_break_base_ms', '0');
     localStorage.setItem('fs_active_date', today);
     state.activeMs = 0;
   } else {
     state.activeMs = parseInt(localStorage.getItem(LS_ACTIVE_KEY) || '0', 10);
   }
+  state.lessonStartMs = state.activeMs;  // snapshot: where this lesson started
+  state.breakBaseMs   = parseInt(localStorage.getItem('fs_break_base_ms') || '0', 10);
+  // If break base is from a previous day / ahead of today's counter, reset it
+  if (state.breakBaseMs > state.activeMs) state.breakBaseMs = state.activeMs;
 
   window._BREAK_WARN_MS  = BREAK_WARN_MS;
   window._BREAK_FORCE_MS = BREAK_FORCE_MS;
@@ -109,11 +116,12 @@ function startActiveTimer() {
     localStorage.setItem(LS_ACTIVE_KEY, String(state.activeMs));
     localStorage.setItem('fs_active_date', new Date().toISOString().split('T')[0]);
 
-    if (!state.breakWarnShown && state.activeMs >= window._BREAK_WARN_MS) {
+    const msSinceBreak = state.activeMs - state.breakBaseMs;
+    if (!state.breakWarnShown && msSinceBreak >= window._BREAK_WARN_MS) {
       state.breakWarnShown = true;
       showBreakReminder();
     }
-    if (state.activeMs >= window._BREAK_FORCE_MS) {
+    if (msSinceBreak >= window._BREAK_FORCE_MS) {
       startBreak();
     }
   }, 1000);
@@ -337,10 +345,12 @@ function setupCheckin() {
 }
 
 function endBreak() {
-  state.activeMs = 0;
+  // Don't reset activeMs — keep accumulating for correct time tracking.
+  // Instead, record where we are so the NEXT break triggers 25 min from now.
+  state.breakBaseMs = state.activeMs;
   state.breakWarnShown = false;
   state.breakActive = false;
-  localStorage.setItem(LS_ACTIVE_KEY, '0');
+  localStorage.setItem('fs_break_base_ms', String(state.breakBaseMs));
 
   // Stop & destroy break player
   try { state.breakPlayer?.stopVideo?.(); } catch {}
@@ -876,7 +886,7 @@ async function completeLesson() {
     lesson_id:  state.lessonId,
     completed:  true,
     score:      100,
-    time_spent_seconds: Math.round(state.activeMs / 1000),
+    time_spent_seconds: Math.round((state.activeMs - state.lessonStartMs) / 1000),
     completed_at: new Date().toISOString()
   }, { onConflict: 'user_id,lesson_id' });
 
