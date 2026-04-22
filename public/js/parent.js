@@ -154,7 +154,8 @@ async function loadDashboard() {
     loadSubjectProgress(sb, activeChildId),
     loadStreak(sb, activeChildId),
     loadChallengeReviews(sb, activeChildId),
-    loadSurpriseAlert(sb, activeChildId)
+    loadSurpriseAlert(sb, activeChildId),
+    loadLearningReport(sb, activeChildId)
   ]);
 }
 
@@ -302,6 +303,114 @@ async function loadSubjectProgress(sb, lennyId) {
     `;
     container.appendChild(item);
   });
+}
+
+/* ─── KI-Lernbericht ─── */
+async function loadLearningReport(sb, lennyId) {
+  const grid = document.getElementById('report-grid');
+  if (!grid) return;
+
+  const [profileRes, chatRes, sessionRes, progressRes] = await Promise.all([
+    sb.from('child_profiles').select('*').eq('user_id', lennyId).maybeSingle(),
+    sb.from('chat_messages').select('id, created_at').eq('user_id', lennyId),
+    sb.from('sessions').select('start_time, breaks_taken').eq('user_id', lennyId).order('start_time', { ascending: false }),
+    sb.from('progress').select('completed_at, time_spent_seconds').eq('user_id', lennyId).eq('completed', true)
+  ]);
+
+  const profile   = profileRes.data;
+  const chats     = chatRes.data     || [];
+  const sessions  = sessionRes.data  || [];
+  const progress  = progressRes.data || [];
+
+  // Last active
+  const lastSession = sessions[0]?.start_time;
+  const lastActiveEl = document.getElementById('report-last-active');
+  if (lastActiveEl && lastSession) {
+    lastActiveEl.textContent = 'Zuletzt aktiv: ' + formatRelative(new Date(lastSession));
+  }
+
+  // Engagement stats
+  const avgAttempts    = profile?.avg_quiz_attempts ?? null;
+  const totalQuestions = chats.length;
+  const totalBreaks    = sessions.reduce((s, r) => s + (r.breaks_taken || 0), 0);
+  const totalLessons   = progress.length;
+  const totalMins      = Math.round(progress.reduce((s, p) => s + (p.time_spent_seconds || 0), 0) / 60);
+
+  // Attempt quality label
+  const attemptLabel = avgAttempts === null ? '—'
+    : avgAttempts <= 1.2 ? '🟢 Sehr gut'
+    : avgAttempts <= 1.8 ? '🟡 Gut'
+    : '🔴 Braucht Übung';
+
+  grid.innerHTML = `
+    <div class="report-card">
+      <div class="report-card__label">Ø Quiz-Versuche</div>
+      <div class="report-card__value" style="font-size:1.1rem;margin-top:4px">${avgAttempts !== null ? avgAttempts.toFixed(1) : '—'}</div>
+      <div class="report-card__sub">${attemptLabel}</div>
+    </div>
+    <div class="report-card">
+      <div class="report-card__label">Fragen gestellt</div>
+      <div class="report-card__value" style="color:var(--purple)">${totalQuestions}</div>
+      <div class="report-card__sub">via KI-Chat</div>
+    </div>
+    <div class="report-card">
+      <div class="report-card__label">Pausen gemacht</div>
+      <div class="report-card__value" style="color:var(--green)">${totalBreaks}</div>
+      <div class="report-card__sub">Bewegungspausen gesamt</div>
+    </div>
+    <div class="report-card">
+      <div class="report-card__label">Gesamtlernzeit</div>
+      <div class="report-card__value" style="color:var(--yellow)">${totalMins >= 60 ? (totalMins/60).toFixed(1)+'h' : totalMins+'min'}</div>
+      <div class="report-card__sub">${totalLessons} Lektionen abgeschlossen</div>
+    </div>
+  `;
+
+  // KI-Stärken & Schwächen
+  const strong = profile?.strong_topics || [];
+  const weak   = profile?.weak_topics   || [];
+  const notes  = profile?.learning_notes || '';
+  const interests = profile?.interests  || [];
+
+  if (strong.length || weak.length || notes || interests.length) {
+    if (strong.length) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div style="grid-column:1/-1">
+          <div class="report-section-title">✅ Stärken laut KI</div>
+          <div class="report-tags">${strong.map(t => `<span class="report-tag report-tag--green">${t}</span>`).join('')}</div>
+        </div>
+      `);
+    }
+    if (weak.length) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div style="grid-column:1/-1">
+          <div class="report-section-title">⚠️ Noch zu üben</div>
+          <div class="report-tags">${weak.map(t => `<span class="report-tag report-tag--red">${t}</span>`).join('')}</div>
+        </div>
+      `);
+    }
+    if (interests.length) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div style="grid-column:1/-1">
+          <div class="report-section-title">💡 Interessen & bevorzugte Beispiele</div>
+          <div class="report-tags">${interests.map(t => `<span class="report-tag report-tag--purple">${t}</span>`).join('')}</div>
+        </div>
+      `);
+    }
+    if (notes) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div style="grid-column:1/-1">
+          <div class="report-section-title">📝 KI-Notizen</div>
+          <div class="report-notes">"${notes}"</div>
+        </div>
+      `);
+    }
+  } else if (!profile) {
+    grid.insertAdjacentHTML('beforeend', `
+      <div style="grid-column:1/-1" class="text-sm text-muted">
+        Noch keine KI-Analyse vorhanden — entsteht automatisch nach den ersten Lektionen.
+      </div>
+    `);
+  }
 }
 
 /* ─── Streak calendar ─── */
